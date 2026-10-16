@@ -20,6 +20,8 @@ describe("Artificial Analysis API", () => {
       inputPrice: 0.25,
       outputPrice: 1.5,
       speed: 150.5,
+      latency: 0.65,
+      creatorId: "example-lab",
     });
     expect(JSON.stringify(snapshot)).not.toContain("test-key-not-real");
   });

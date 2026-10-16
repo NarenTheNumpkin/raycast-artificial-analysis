@@ -30,6 +30,63 @@
         "coding",
         "models"
       ]
+    },
+    {
+      "name": "all-ai-models",
+      "title": "All AI Models",
+      "description": "Browse every evaluated configuration ranked by intelligence.",
+      "mode": "view",
+      "keywords": [
+        "llm",
+        "intelligence",
+        "all",
+        "benchmark"
+      ]
+    },
+    {
+      "name": "best-coding-models",
+      "title": "Best Coding Models",
+      "description": "Find the strongest coding models by Coding Index.",
+      "mode": "view",
+      "keywords": [
+        "coding",
+        "programming",
+        "code"
+      ]
+    },
+    {
+      "name": "fastest-ai-models",
+      "title": "Fastest AI Models",
+      "description": "Rank models by median output tokens per second.",
+      "mode": "view",
+      "keywords": [
+        "speed",
+        "fast",
+        "throughput"
+      ]
+    },
+    {
+      "name": "model-pricing",
+      "title": "Model Pricing",
+      "description": "Compare input or output token prices, lowest first.",
+      "mode": "view",
+      "keywords": [
+        "cost",
+        "price",
+        "cheap",
+        "tokens"
+      ]
+    },
+    {
+      "name": "lowest-latency-models",
+      "title": "Lowest Latency Models",
+      "description": "Rank models by time to first token, lowest first.",
+      "mode": "view",
+      "keywords": [
+        "latency",
+        "response",
+        "ttft"
+      ]
     }
   ],
   "preferences": [

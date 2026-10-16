@@ -49,6 +49,16 @@ describe("leaderboard cache", () => {
     expect(isFresh(snapshot({ fetchedAt: NOW + 1 }), NOW)).toBe(false);
   });
 
+  it("invalidates older model snapshots while preserving their rate-limit cooldown", async () => {
+    cache.set(credentialCacheKey("key", 1), JSON.stringify(snapshot()));
+    cache.set(`${credentialCacheKey("key", 1)}:retry-at`, String(NOW + 60_000));
+    const loader = vi.fn();
+    const service = new LeaderboardService("key", cache, { loader, now: () => NOW });
+    expect(service.readSnapshot()).toBeUndefined();
+    await expect(service.refresh(true)).rejects.toMatchObject({ kind: "rate-limit", retryAt: NOW + 60_000 });
+    expect(loader).not.toHaveBeenCalled();
+  });
+
   it("allows a manual refresh to bypass freshness", async () => {
     const loader = vi.fn().mockResolvedValue({ snapshot: snapshot() });
     const service = new LeaderboardService("key", cache, { loader, now: () => NOW });

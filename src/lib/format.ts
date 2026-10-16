@@ -1,5 +1,5 @@
 import { LEADERBOARD_URL } from "./api";
-import { formatPrice, formatScore } from "./metrics";
+import { formatPrice, formatScore, METRICS } from "./metrics";
 import type { LeaderboardSnapshot, RankedModel } from "./models";
 
 export { formatPrice, formatScore } from "./metrics";
@@ -74,16 +74,18 @@ export function modelSummary(
 ): string {
   const lines = [
     `#${model.rank} ${model.name} — ${model.creator}`,
+    `Ranked by: ${METRICS[model.metric].title} (${model.rankScope === "families" ? "distinct models" : "evaluated configurations"})`,
     `Intelligence Index v${snapshot.indexVersion}: ${model.intelligence ?? MISSING}`,
   ];
-  if (preferences.showCoding) lines.push(`Coding Index: ${model.coding ?? MISSING}`);
-  if (preferences.showPrice) {
+  if (preferences.showCoding || model.metric === "coding") lines.push(`Coding Index: ${model.coding ?? MISSING}`);
+  if (preferences.showPrice || model.metric === "inputPrice" || model.metric === "outputPrice") {
     lines.push(
       `Price (USD per 1M tokens): ${formatPrice(model.inputPrice)} input / ${formatPrice(model.outputPrice)} output`,
     );
   }
-  if (preferences.showSpeed)
+  if (preferences.showSpeed || model.metric === "speed")
     lines.push(`Median output speed: ${model.speed === null ? MISSING : `${model.speed} tokens/s`}`);
+  if (model.metric === "latency") lines.push(`Time to first token: ${METRICS.latency.format(model.latency)}`);
   lines.push(
     `Source: Artificial Analysis (${modelUrl(model.slug)})`,
     `Leaderboard: ${LEADERBOARD_URL}`,

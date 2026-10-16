@@ -1,4 +1,12 @@
 const PROVIDERS: Record<string, string> = {
+  ai21labs: "ai21",
+  ai21: "ai21",
+  lg: "lg",
+  lgairesearch: "lg",
+  nousresearch: "nousresearch",
+  inception: "inception",
+  tencenthunyuan: "hunyuan",
+  bytedanceseed: "bytedance",
   openai: "openai",
   anthropic: "anthropic",
   google: "gemini",

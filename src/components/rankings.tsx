@@ -12,17 +12,30 @@ import {
 } from "@raycast/api";
 import { useEffect, useMemo, useState } from "react";
 import { useLeaderboard } from "../hooks/use-leaderboard";
+import { useFavorites } from "../hooks/use-favorites";
 import { API_KEY_URL, LEADERBOARD_URL } from "../lib/api";
 import { browseCardSvg, modelCardSvg } from "../lib/cards";
 import { distinctModelRankings, familyName } from "../lib/families";
+import { ALL_PROVIDERS, browseEntries, providers } from "../lib/filters";
 import { formatAge, formatRetrievedAt, modelSummary, modelUrl, type MetricPreferences } from "../lib/format";
 import { logoSvg, providerIcon, svgImage } from "../lib/images";
 import { METRICS, type MetricKey } from "../lib/metrics";
-import { filterRankings, rankModels, type LeaderboardSnapshot, type RankedModel } from "../lib/models";
+import { rankModels, type LeaderboardSnapshot, type RankedModel } from "../lib/models";
 
 function useData() {
   const preferences = getPreferenceValues<Preferences>();
-  return { ...useLeaderboard(preferences.apiKey), preferences };
+  return { ...useLeaderboard(preferences.apiKey), preferences, favorites: useFavorites() };
+}
+
+function useBrowseControls(
+  snapshot: LeaderboardSnapshot | undefined,
+  initialFavoritesOnly = false,
+  allowFavorites = true,
+) {
+  const [providerId, setProviderId] = useState(ALL_PROVIDERS);
+  const [favoritesOnly, setFavoritesOnly] = useState(initialFavoritesOnly);
+  const creators = useMemo(() => providers(snapshot?.models ?? []), [snapshot]);
+  return { providerId, setProviderId, favoritesOnly, setFavoritesOnly, creators, allowFavorites };
 }
 
 function useNow() {
@@ -58,9 +71,11 @@ interface ActionsProps {
   preferences: MetricPreferences;
   refresh: () => Promise<void>;
   details?: boolean;
+  favorites: ReturnType<typeof useFavorites>;
+  controls?: ReturnType<typeof useBrowseControls>;
 }
 
-function ModelActions({ model, snapshot, preferences, refresh, details = true }: ActionsProps) {
+function ModelActions({ model, snapshot, preferences, refresh, details = true, favorites, controls }: ActionsProps) {
   return (
     <ActionPanel>
       {model && details ? (
@@ -68,6 +83,14 @@ function ModelActions({ model, snapshot, preferences, refresh, details = true }:
           title="View Model Details"
           icon={Icon.Sidebar}
           target={<ModelDetails modelId={model.id} metric={model.metric} />}
+        />
+      ) : null}
+      {model ? (
+        <Action
+          title={favorites.ids.has(model.id) ? "Remove from Favorites" : "Add to Favorites"}
+          icon={favorites.ids.has(model.id) ? Icon.StarDisabled : Icon.Star}
+          shortcut={Keyboard.Shortcut.Common.Pin}
+          onAction={() => favorites.toggle(model.id)}
         />
       ) : null}
       <Action
@@ -79,6 +102,7 @@ function ModelActions({ model, snapshot, preferences, refresh, details = true }:
       <ActionPanel.Submenu title="View" icon={Icon.AppWindowList}>
         <Action.Push title="Top Five Models" icon={Icon.Stars} target={<Dashboard />} />
         <Action.Push title="All AI Models" icon={Icon.List} target={<RankingsList />} />
+        <Action.Push title="Favorites" icon={Icon.Star} target={<RankingsList initialFavoritesOnly />} />
         <Action.Push title="Best Coding Models" icon={Icon.Code} target={<RankingsList initialMetric="coding" />} />
         <Action.Push title="Fastest AI Models" icon={Icon.Bolt} target={<RankingsList initialMetric="speed" />} />
         <Action.Push
@@ -92,6 +116,40 @@ function ModelActions({ model, snapshot, preferences, refresh, details = true }:
           target={<RankingsList initialMetric="latency" />}
         />
       </ActionPanel.Submenu>
+      {controls ? (
+        <ActionPanel.Submenu title="Filter" icon={Icon.Filter}>
+          <ActionPanel.Submenu title="Provider" icon={Icon.Person}>
+            <Action
+              title="All Providers"
+              icon={controls.providerId === ALL_PROVIDERS ? Icon.Checkmark : Icon.Circle}
+              onAction={() => controls.setProviderId(ALL_PROVIDERS)}
+            />
+            {controls.creators.map((creator) => (
+              <Action
+                key={creator.id}
+                title={creator.name}
+                icon={controls.providerId === creator.id ? Icon.Checkmark : providerIcon(creator.name)}
+                onAction={() => controls.setProviderId(creator.id)}
+              />
+            ))}
+          </ActionPanel.Submenu>
+          {controls.allowFavorites ? (
+            <Action
+              title={controls.favoritesOnly ? "Show All Models" : "Show Favorites Only"}
+              icon={Icon.Star}
+              onAction={() => controls.setFavoritesOnly(!controls.favoritesOnly)}
+            />
+          ) : null}
+          <Action
+            title="Clear Filters"
+            icon={Icon.XMarkCircle}
+            onAction={() => {
+              controls.setProviderId(ALL_PROVIDERS);
+              controls.setFavoritesOnly(false);
+            }}
+          />
+        </ActionPanel.Submenu>
+      ) : null}
       {model ? (
         <ActionPanel.Submenu title="Copy" icon={Icon.Clipboard}>
           <Action.CopyToClipboard
@@ -123,8 +181,18 @@ export function Dashboard() {
   const data = useData();
   const now = useNow();
   const [search, setSearch] = useState("");
+  const controls = useBrowseControls(data.snapshot, false, false);
   const families = useMemo(() => distinctModelRankings(data.snapshot?.models ?? []), [data.snapshot]);
-  const visible = useMemo(() => filterRankings(families, search).slice(0, 5), [families, search]);
+  const visible = useMemo(
+    () =>
+      browseEntries(
+        families,
+        search,
+        { providerId: controls.providerId, favoritesOnly: false },
+        data.favorites.ids,
+      ).slice(0, 5),
+    [families, search, controls.providerId, controls.favoritesOnly, data.favorites.ids],
+  );
   const cards = useMemo(
     () =>
       visible.map((model) => ({
@@ -151,11 +219,18 @@ export function Dashboard() {
         title={error ? "Unable to Load Rankings" : data.isLoading ? "Loading Models…" : "No Matching Models"}
         description={error ?? "Try a different model name or provider."}
         icon={error ? Icon.ExclamationMark : Icon.MagnifyingGlass}
-        actions={<ModelActions preferences={data.preferences} refresh={() => data.refresh()} />}
+        actions={
+          <ModelActions
+            preferences={data.preferences}
+            favorites={data.favorites}
+            controls={controls}
+            refresh={() => data.refresh()}
+          />
+        }
       />
       {data.snapshot ? (
         <Grid.Section
-          title="Top Five · Intelligence"
+          title={`Top Five · ${controls.providerId === ALL_PROVIDERS ? "Intelligence" : (controls.creators.find((creator) => creator.id === controls.providerId)?.name ?? "Provider")}`}
           subtitle={`Artificial Analysis · ${error ? "Cached · refresh failed" : formatAge(data.snapshot.fetchedAt, now)}`}
         >
           {cards.map(({ model, image }) => (
@@ -172,6 +247,8 @@ export function Dashboard() {
                   model={model}
                   snapshot={data.snapshot}
                   preferences={data.preferences}
+                  favorites={data.favorites}
+                  controls={controls}
                   refresh={() => data.refresh()}
                 />
               }
@@ -198,21 +275,35 @@ export function Dashboard() {
 export function RankingsList({
   initialMetric = "intelligence",
   pricing = false,
+  initialFavoritesOnly = false,
 }: {
   initialMetric?: MetricKey;
   pricing?: boolean;
+  initialFavoritesOnly?: boolean;
 }) {
   const data = useData();
   const now = useNow();
   const [search, setSearch] = useState("");
   const [metric, setMetric] = useState(initialMetric);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const controls = useBrowseControls(data.snapshot, initialFavoritesOnly);
   const ranked = useMemo(() => rankModels(data.snapshot?.models ?? [], metric), [data.snapshot, metric]);
-  const visible = useMemo(() => filterRankings(ranked, search), [ranked, search]);
+  const visible = useMemo(
+    () =>
+      browseEntries(
+        ranked,
+        search,
+        { providerId: controls.providerId, favoritesOnly: controls.favoritesOnly },
+        data.favorites.ids,
+      ),
+    [ranked, search, controls.providerId, controls.favoritesOnly, data.favorites.ids],
+  );
   if (data.needsApiKey) return <Setup />;
   const error = failureMessage(data);
   const definition = METRICS[metric];
   return (
     <List
+      onSelectionChange={setSelectedId}
       navigationTitle={definition.commandTitle}
       searchBarPlaceholder="Search models or providers…"
       filtering={false}
@@ -238,11 +329,18 @@ export function RankingsList({
         description={
           error ?? `No models match your search with a published ${definition.title.toLowerCase()} measurement.`
         }
-        actions={<ModelActions preferences={data.preferences} refresh={() => data.refresh()} />}
+        actions={
+          <ModelActions
+            preferences={data.preferences}
+            favorites={data.favorites}
+            controls={controls}
+            refresh={() => data.refresh()}
+          />
+        }
       />
       {data.snapshot ? (
         <List.Section
-          title={definition.title}
+          title={`${controls.favoritesOnly ? "Favorites · " : ""}${definition.title}${metric === "inputPrice" || metric === "outputPrice" ? " · USD/1M" : ""}${controls.providerId !== ALL_PROVIDERS ? ` · ${controls.creators.find((creator) => creator.id === controls.providerId)?.name ?? "Provider"}` : ""}`}
           subtitle={`Artificial Analysis · ${error ? "Cached · refresh failed" : formatAge(data.snapshot.fetchedAt, now)}`}
         >
           {visible.map((model) => (
@@ -255,12 +353,16 @@ export function RankingsList({
                 { text: definition.format(model.value), tooltip: `${definition.title} · ${definition.unit}` },
               ]}
               actions={
-                <ModelActions
-                  model={model}
-                  snapshot={data.snapshot}
-                  preferences={data.preferences}
-                  refresh={() => data.refresh()}
-                />
+                (visible.some((entry) => entry.id === selectedId) ? selectedId : visible[0]?.id) === model.id ? (
+                  <ModelActions
+                    model={model}
+                    snapshot={data.snapshot}
+                    preferences={data.preferences}
+                    favorites={data.favorites}
+                    controls={controls}
+                    refresh={() => data.refresh()}
+                  />
+                ) : undefined
               }
             />
           ))}
@@ -303,19 +405,24 @@ function ModelDetails({ modelId, metric }: { modelId: string; metric: MetricKey 
   metadata.add("latency");
   metadata.delete(metric);
   const warning = failureMessage(data);
+  const configuration = model.name.slice(familyName(model.name).length).trim();
   return (
     <Detail
       navigationTitle={familyName(model.name)}
       isLoading={data.isLoading}
-      markdown={`# ${markdownText(familyName(model.name))}\n\n# ${METRICS[metric].format(model.value)}\n\n${METRICS[metric].title}${warning ? `\n\n> Cached data: ${markdownText(warning)}` : ""}`}
+      markdown={`# ${markdownText(familyName(model.name))}\n\n# ${METRICS[metric].format(model.value)}\n\n${METRICS[metric].title}${configuration ? `\n\nConfiguration: ${markdownText(configuration)}` : ""}${warning ? `\n\n> Cached data: ${markdownText(warning)}` : ""}`}
       metadata={
         <Detail.Metadata>
-          <Detail.Metadata.Label title="Rank" text={`#${model.rank}`} />
+          <Detail.Metadata.Label title="Configuration Rank" text={`#${model.rank}`} />
           <Detail.Metadata.Label title="Provider" text={model.creator} icon={providerIcon(model.creator)} />
           <Detail.Metadata.Label title="Configuration" text={model.name} />
           <Detail.Metadata.Separator />
           {[...metadata].map((key) => (
-            <Detail.Metadata.Label key={key} title={METRICS[key].title} text={METRICS[key].format(model[key])} />
+            <Detail.Metadata.Label
+              key={key}
+              title={`${METRICS[key].title}${key === "inputPrice" || key === "outputPrice" ? " · USD/1M" : ""}`}
+              text={METRICS[key].format(model[key])}
+            />
           ))}
           <Detail.Metadata.Separator />
           <Detail.Metadata.Label title="Index Version" text={`v${data.snapshot.indexVersion}`} />
@@ -328,6 +435,7 @@ function ModelDetails({ modelId, metric }: { modelId: string; metric: MetricKey 
           model={model}
           snapshot={data.snapshot}
           preferences={p}
+          favorites={data.favorites}
           refresh={() => data.refresh()}
           details={false}
         />

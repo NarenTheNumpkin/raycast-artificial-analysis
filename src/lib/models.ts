@@ -20,7 +20,12 @@ export interface LeaderboardSnapshot {
   models: Model[];
 }
 
-export type RankedModel = Model & { rank: number; value: number; metric: MetricKey };
+export type RankedModel = Model & {
+  rank: number;
+  value: number;
+  metric: MetricKey;
+  rankScope: "families" | "configurations";
+};
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -44,7 +49,7 @@ export function rankModels(models: Model[], metric: MetricKey = "intelligence"):
   let rank = 0;
   return scored.map((model, index) => {
     if (index === 0 || model.value !== scored[index - 1].value) rank = index + 1;
-    return { ...model, rank };
+    return { ...model, rank, rankScope: "configurations" };
   });
 }
 

@@ -33,5 +33,5 @@ export function distinctModelRankings(models: Model[]): RankedModel[] {
     seen.add(key);
     return true;
   });
-  return rankModels(best);
+  return rankModels(best).map((model) => ({ ...model, rankScope: "families" }));
 }
