@@ -58,6 +58,7 @@ export class LeaderboardService {
   private readonly now: () => number;
   private readonly loader: (signal?: AbortSignal) => Promise<FetchResult>;
   private pending?: Promise<LeaderboardSnapshot>;
+  private pendingSignal?: AbortSignal;
 
   constructor(
     apiKey: string,
@@ -89,7 +90,7 @@ export class LeaderboardService {
   }
 
   refresh(force = false, signal?: AbortSignal): Promise<LeaderboardSnapshot> {
-    if (this.pending) return this.pending;
+    if (this.pending && !this.pendingSignal?.aborted) return this.pending;
     const cached = this.readSnapshot();
     if (!force && cached && isFresh(cached, this.now())) return Promise.resolve(cached);
     const retryAt = this.getRetryAt();
@@ -102,10 +103,15 @@ export class LeaderboardService {
         ),
       );
     }
-    this.pending = this.update(signal).finally(() => {
-      this.pending = undefined;
+    const pending = this.update(signal).finally(() => {
+      if (this.pending === pending) {
+        this.pending = undefined;
+        this.pendingSignal = undefined;
+      }
     });
-    return this.pending;
+    this.pending = pending;
+    this.pendingSignal = signal;
+    return pending;
   }
 
   private async update(signal?: AbortSignal): Promise<LeaderboardSnapshot> {

@@ -140,4 +140,40 @@ describe("leaderboard cache", () => {
     await expect(service.refresh(false, controller.signal)).rejects.toMatchObject({ name: "AbortError" });
     expect(service.readSnapshot()).toBeUndefined();
   });
+
+  it("lets a reopened command fetch while a canceled request is still settling", async () => {
+    let finishFirst!: (result: FetchResult) => void;
+    let finishSecond!: (result: FetchResult) => void;
+    const loader = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<FetchResult>((resolve) => {
+            finishFirst = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<FetchResult>((resolve) => {
+            finishSecond = resolve;
+          }),
+      );
+    const service = new LeaderboardService("key", cache, { loader, now: () => NOW });
+    const firstController = new AbortController();
+    const first = service.refresh(false, firstController.signal);
+    const canceled = expect(first).rejects.toMatchObject({ name: "AbortError" });
+    firstController.abort();
+
+    const second = service.refresh(false, new AbortController().signal);
+    expect(second).not.toBe(first);
+    expect(loader).toHaveBeenCalledTimes(2);
+    finishFirst({ snapshot: snapshot({ indexVersion: 4.1 }) });
+    await canceled;
+    expect(service.readSnapshot()).toBeUndefined();
+    expect(service.refresh(true)).toBe(second);
+
+    finishSecond({ snapshot: snapshot() });
+    expect(await second).toEqual(snapshot());
+    expect(service.readSnapshot()).toEqual(snapshot());
+  });
 });

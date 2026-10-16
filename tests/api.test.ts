@@ -64,14 +64,12 @@ describe("Artificial Analysis API", () => {
   });
 
   it("honors Retry-After and the later rate-limit reset", async () => {
-    const fetcher = vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(
-        new Response(null, {
-          status: 429,
-          headers: { "Retry-After": "60", "X-RateLimit-Reset": String(NOW / 1000 + 120) },
-        }),
-      );
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(null, {
+        status: 429,
+        headers: { "Retry-After": "60", "X-RateLimit-Reset": String(NOW / 1000 + 120) },
+      }),
+    );
     await expect(fetchLeaderboard("test-key", { fetcher, now: () => NOW })).rejects.toMatchObject({
       kind: "rate-limit",
       retryAt: NOW + 120_000,
@@ -98,13 +96,11 @@ describe("Artificial Analysis API", () => {
   });
 
   it("stops before the next page when the quota is exhausted", async () => {
-    const fetcher = vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(
-        Response.json(page([apiModel()], 1, 2), {
-          headers: { "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": String(NOW / 1000 + 120) },
-        }),
-      );
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json(page([apiModel()], 1, 2), {
+        headers: { "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": String(NOW / 1000 + 120) },
+      }),
+    );
     await expect(fetchLeaderboard("test-key", { fetcher, now: () => NOW })).rejects.toMatchObject({
       kind: "rate-limit",
     });
@@ -112,13 +108,11 @@ describe("Artificial Analysis API", () => {
   });
 
   it("keeps a successful final page while reporting an exhausted quota", async () => {
-    const fetcher = vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(
-        Response.json(page(), {
-          headers: { "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": String(NOW / 1000 + 120) },
-        }),
-      );
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json(page(), {
+        headers: { "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": String(NOW / 1000 + 120) },
+      }),
+    );
     const result = await fetchLeaderboard("test-key", { fetcher, now: () => NOW });
     expect(result.snapshot.models).toHaveLength(1);
     expect(result.retryAt).toBe(NOW + 120_000);

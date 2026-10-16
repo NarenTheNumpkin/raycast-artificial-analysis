@@ -38,7 +38,7 @@
       "type": "password",
       "title": "Artificial Analysis API Key",
       "description": "Create a free key at https://artificialanalysis.ai/api-key-management-redirect. Your key is used only for requests to Artificial Analysis.",
-      "required": true
+      "required": false
     },
     {
       "name": "showCoding",
