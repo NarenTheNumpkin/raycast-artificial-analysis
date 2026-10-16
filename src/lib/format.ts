@@ -1,5 +1,8 @@
 import { LEADERBOARD_URL } from "./api";
+import { formatPrice, formatScore } from "./metrics";
 import type { LeaderboardSnapshot, RankedModel } from "./models";
+
+export { formatPrice, formatScore } from "./metrics";
 
 export interface MetricPreferences {
   showCoding: boolean;
@@ -14,23 +17,7 @@ export interface DisplayMetric {
 }
 
 const MISSING = "—";
-const priceFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 8,
-});
 const speedFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
-
-export function formatScore(value: number | null): string {
-  return value === null ? MISSING : value.toFixed(1);
-}
-
-export function formatPrice(value: number | null): string {
-  if (value === null) return MISSING;
-  if (value > 0 && value < 0.00000001) return `$${value.toExponential(2)}`;
-  return priceFormatter.format(value);
-}
 
 export function modelUrl(slug: string): string {
   return `https://artificialanalysis.ai/models/${encodeURIComponent(slug)}`;
@@ -87,7 +74,7 @@ export function modelSummary(
 ): string {
   const lines = [
     `#${model.rank} ${model.name} — ${model.creator}`,
-    `Intelligence Index v${snapshot.indexVersion}: ${model.intelligence}`,
+    `Intelligence Index v${snapshot.indexVersion}: ${model.intelligence ?? MISSING}`,
   ];
   if (preferences.showCoding) lines.push(`Coding Index: ${model.coding ?? MISSING}`);
   if (preferences.showPrice) {

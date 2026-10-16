@@ -15,8 +15,8 @@ interface ServiceOptions {
   loader?: (signal?: AbortSignal) => Promise<FetchResult>;
 }
 
-export function credentialCacheKey(apiKey: string): string {
-  return `v1:${createHash("sha256").update(apiKey.trim()).digest("hex")}`;
+export function credentialCacheKey(apiKey: string, schemaVersion = 2): string {
+  return `v${schemaVersion}:${createHash("sha256").update(apiKey.trim()).digest("hex")}`;
 }
 
 export function isFresh(snapshot: LeaderboardSnapshot, now: number): boolean {
@@ -40,13 +40,17 @@ function isSnapshot(value: unknown): value is LeaderboardSnapshot {
   const ids = new Set<string>();
   return value.models.every((model: unknown) => {
     if (!isRecord(model)) return false;
-    if (!["id", "name", "slug", "creator"].every((field) => typeof model[field] === "string" && model[field].trim())) {
+    if (
+      !["id", "name", "slug", "creator", "creatorId"].every(
+        (field) => typeof model[field] === "string" && model[field].trim(),
+      )
+    ) {
       return false;
     }
     const id = model.id as string;
     if (ids.has(id)) return false;
     ids.add(id);
-    return ["intelligence", "coding", "inputPrice", "outputPrice", "speed"].every(
+    return ["intelligence", "coding", "inputPrice", "outputPrice", "speed", "latency"].every(
       (field) => model[field] === null || finiteMetric(model[field]) !== null,
     );
   });
@@ -66,7 +70,8 @@ export class LeaderboardService {
     options: ServiceOptions = {},
   ) {
     this.snapshotKey = credentialCacheKey(apiKey);
-    this.cooldownKey = `${this.snapshotKey}:retry-at`;
+    // Quota metadata stays compatible when the model snapshot schema changes.
+    this.cooldownKey = `${credentialCacheKey(apiKey, 1)}:retry-at`;
     this.now = options.now ?? Date.now;
     this.loader = options.loader ?? ((signal) => fetchLeaderboard(apiKey, { signal, now: this.now }));
   }

@@ -20,7 +20,7 @@
     {
       "name": "ai-model-rankings",
       "title": "AI Model Rankings",
-      "description": "Search the Artificial Analysis Intelligence Index leaderboard.",
+      "description": "Discover the top five distinct AI models with quick access to all rankings.",
       "mode": "view",
       "keywords": [
         "llm",
@@ -45,7 +45,7 @@
       "type": "checkbox",
       "title": "Optional Statistics",
       "label": "Show Coding Index",
-      "description": "Display the Artificial Analysis Coding Index alongside Intelligence Index.",
+      "description": "Show Coding Index in model details. List rows display only the active ranking metric.",
       "default": false,
       "required": false
     },
@@ -54,7 +54,7 @@
       "type": "checkbox",
       "title": "",
       "label": "Show Input and Output Prices",
-      "description": "Display input and output prices in USD per million tokens.",
+      "description": "Show input and output prices in model details, in USD per million tokens.",
       "default": false,
       "required": false
     },
@@ -63,7 +63,7 @@
       "type": "checkbox",
       "title": "",
       "label": "Show Output Speed",
-      "description": "Display median output tokens per second.",
+      "description": "Show median output tokens per second in model details.",
       "default": false,
       "required": false
     }

@@ -51,11 +51,13 @@ function parseModel(value: unknown): Model {
     name: requiredText(value.name),
     slug: requiredText(value.slug),
     creator: requiredText(value.model_creator.name),
+    creatorId: requiredText(value.model_creator.id),
     intelligence: finiteMetric(value.evaluations.artificial_analysis_intelligence_index),
     coding: finiteMetric(value.evaluations.artificial_analysis_coding_index),
     inputPrice: finiteMetric(pricing.price_1m_input_tokens),
     outputPrice: finiteMetric(pricing.price_1m_output_tokens),
     speed: finiteMetric(performance.median_output_tokens_per_second),
+    latency: finiteMetric(performance.median_time_to_first_token_seconds),
   };
 }
 
