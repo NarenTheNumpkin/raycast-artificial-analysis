@@ -2,7 +2,6 @@ import { Color, Icon, List } from "@raycast/api";
 import { useMemo, useState } from "react";
 import { useCachedFlag } from "../hooks/use-cached-flag";
 import {
-  failureMessage,
   updatedText,
   useBrowseControls,
   useNow,
@@ -17,6 +16,7 @@ import { isPriceMetric, METRIC_GROUPS, METRICS, type MetricKey } from "../lib/me
 import { rankModels } from "../lib/models";
 import { buildStandings } from "../lib/standings";
 import { metricIcon } from "./leaderboards";
+import { unavailableState, type EmptyState } from "./load-states";
 import { ModelActions } from "./model-actions";
 import { ModelDetailPanel } from "./model-details";
 import { Setup } from "./setup";
@@ -86,12 +86,7 @@ export function RankingsList({
         </List.Dropdown>
       }
     >
-      <List.EmptyView
-        title={empty.title}
-        description={empty.description}
-        icon={empty.icon}
-        actions={<ModelActions data={data} controls={controls} />}
-      />
+      <List.EmptyView title={empty.title} description={empty.description} icon={empty.icon} actions={empty.actions} />
       {data.snapshot ? (
         <List.Section
           title={sectionTitle(controls, metric)}
@@ -152,26 +147,15 @@ function countText(shown: number, total: number): string {
   return shown === total ? `${total} ${noun}` : `${shown} of ${total} ${noun}`;
 }
 
-function emptyState(
-  data: RankingsData,
-  controls: BrowseControls,
-  search: string,
-  metricTitle: string,
-): { title: string; description: string; icon: Icon } {
-  const error = failureMessage(data);
-  if (!data.snapshot && error) return { title: "Couldn’t Load Rankings", description: error, icon: Icon.Warning };
-  if (!data.snapshot) {
-    return {
-      title: "Loading Rankings…",
-      description: "Fetching the latest data from Artificial Analysis.",
-      icon: Icon.Hourglass,
-    };
-  }
+function emptyState(data: RankingsData, controls: BrowseControls, search: string, metricTitle: string): EmptyState {
+  if (!data.snapshot) return unavailableState(data);
+  const actions = <ModelActions data={data} controls={controls} />;
   if (controls.favoritesOnly && data.favorites.ids.size === 0) {
     return {
       title: "No Favorites Yet",
       description: "Show all models with ⌘⇧F, then press ⌘. on a model to add it here.",
       icon: Icon.Star,
+      actions,
     };
   }
   if (search.trim()) {
@@ -179,11 +163,13 @@ function emptyState(
       title: "No Matching Models",
       description: "Try another model or provider name, or clear your filters.",
       icon: Icon.MagnifyingGlass,
+      actions,
     };
   }
   return {
     title: "No Models to Show",
     description: `No models in this view have a published ${metricTitle} measurement.`,
     icon: Icon.MagnifyingGlass,
+    actions,
   };
 }

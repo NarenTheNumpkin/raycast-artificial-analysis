@@ -10,7 +10,7 @@ const store = new FavoritesStore({
 export function useFavorites() {
   const ids = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   useEffect(() => {
-    void store.load().catch(() => showToast({ style: Toast.Style.Failure, title: "Could Not Load Favorites" }));
+    void store.load().catch(() => showToast({ style: Toast.Style.Failure, title: "Couldn’t Load Favorites" }));
   }, []);
   return {
     ids,
@@ -20,7 +20,7 @@ export function useFavorites() {
       } catch {
         await showToast({
           style: Toast.Style.Failure,
-          title: "Could Not Save Favorite",
+          title: "Couldn’t Save Favorite",
           message: "Your previous favorites have been restored.",
         });
       }

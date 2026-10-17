@@ -7,7 +7,7 @@ export function Setup() {
       <List.EmptyView
         icon={Icon.Key}
         title="Add Your API Key"
-        description="Connect your free Artificial Analysis key to see the rankings. You can return to setup anytime."
+        description="Rankings need a free Artificial Analysis API key. Press ↵ to paste yours in preferences, or ⌘↵ to create one."
         actions={
           <ActionPanel>
             <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />

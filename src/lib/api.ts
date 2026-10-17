@@ -7,7 +7,8 @@ export const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_PAGES = 100;
 const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000;
 
-type ErrorKind = "authentication" | "forbidden" | "rate-limit" | "network" | "timeout" | "invalid-data" | "server";
+export type ErrorKind =
+  "authentication" | "forbidden" | "rate-limit" | "network" | "timeout" | "invalid-data" | "server";
 
 export class LeaderboardError extends Error {
   constructor(

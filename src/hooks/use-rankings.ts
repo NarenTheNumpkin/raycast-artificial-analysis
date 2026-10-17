@@ -1,10 +1,10 @@
 import { getPreferenceValues } from "@raycast/api";
 import { useEffect, useMemo, useState } from "react";
 import { ALL_PROVIDERS, providers } from "../lib/filters";
-import { formatAge, formatRetrievedAt } from "../lib/format";
+import { formatAge } from "../lib/format";
 import type { LeaderboardSnapshot } from "../lib/models";
 import { useFavorites } from "./use-favorites";
-import { useLeaderboard } from "./use-leaderboard";
+import { describeLoadError, useLeaderboard } from "./use-leaderboard";
 
 export function useRankingsData() {
   const preferences = getPreferenceValues<Preferences>();
@@ -45,6 +45,5 @@ export function updatedText(data: RankingsData, now: number): string {
 }
 
 export function failureMessage(data: RankingsData): string | undefined {
-  if (!data.error) return undefined;
-  return `${data.error.message}${data.error.retryAt ? ` Retry after ${formatRetrievedAt(data.error.retryAt)}.` : ""}`;
+  return data.error ? describeLoadError(data.error) : undefined;
 }

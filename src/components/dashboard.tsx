@@ -1,6 +1,6 @@
 import { Action, ActionPanel, environment, Grid, Icon } from "@raycast/api";
 import { useMemo, useState } from "react";
-import { failureMessage, updatedText, useBrowseControls, useNow, useRankingsData } from "../hooks/use-rankings";
+import { updatedText, useBrowseControls, useNow, useRankingsData } from "../hooks/use-rankings";
 import { browseCardSvg, modelCardSvg } from "../lib/cards";
 import { distinctModelRankings, familyName } from "../lib/families";
 import { ALL_PROVIDERS, browseEntries } from "../lib/filters";
@@ -8,6 +8,7 @@ import { logoSvg, providerIcon, svgImage } from "../lib/images";
 import { METRICS } from "../lib/metrics";
 import { rankModels, type RankedModel } from "../lib/models";
 import { LeaderboardList, LEADERBOARDS, type Leaderboard } from "./leaderboards";
+import { unavailableState, type EmptyState } from "./load-states";
 import { GeneralActions, ModelActions } from "./model-actions";
 import { RankingsList } from "./rankings-list";
 import { Setup } from "./setup";
@@ -54,8 +55,15 @@ export function Dashboard() {
     [models, data.favorites.ids],
   );
   if (data.needsApiKey) return <Setup />;
-  const error = failureMessage(data);
   const searching = search.trim().length > 0;
+  const emptyState: EmptyState = data.snapshot
+    ? {
+        title: "No Matching Models",
+        description: "Try another model or provider name.",
+        icon: Icon.MagnifyingGlass,
+        actions: <ModelActions data={data} />,
+      }
+    : unavailableState(data);
   return (
     <Grid
       columns={3}
@@ -84,22 +92,10 @@ export function Dashboard() {
       }
     >
       <Grid.EmptyView
-        title={
-          error && !data.snapshot
-            ? "Couldn’t Load Rankings"
-            : data.snapshot
-              ? "No Matching Models"
-              : "Loading Rankings…"
-        }
-        description={
-          error && !data.snapshot
-            ? error
-            : data.snapshot
-              ? "Try another model or provider name."
-              : "Fetching the latest data from Artificial Analysis."
-        }
-        icon={error && !data.snapshot ? Icon.Warning : data.snapshot ? Icon.MagnifyingGlass : Icon.Hourglass}
-        actions={<ModelActions data={data} />}
+        title={emptyState.title}
+        description={emptyState.description}
+        icon={emptyState.icon}
+        actions={emptyState.actions}
       />
       {data.snapshot && cards.length ? (
         <Grid.Section
