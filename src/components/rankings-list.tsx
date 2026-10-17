@@ -98,6 +98,8 @@ export function RankingsList({
             const accessories: List.Item.Accessory[] = [];
             if (favorite)
               accessories.push({ icon: { source: Icon.Star, tintColor: Color.Yellow }, tooltip: "Favorite" });
+            if (data.comparison.ids.has(model.id))
+              accessories.push({ icon: { source: Icon.BarChart, tintColor: Color.Blue }, tooltip: "In comparison" });
             if (!showingPanel) {
               accessories.push({
                 text: { value: definition.format(model.value), color: Color.PrimaryText },
@@ -153,7 +155,7 @@ function emptyState(data: RankingsData, controls: BrowseControls, search: string
   if (controls.favoritesOnly && data.favorites.ids.size === 0) {
     return {
       title: "No Favorites Yet",
-      description: "Show all models with ⌘⇧F, then press ⌘. on a model to add it here.",
+      description: "Choose Show All Models, then press ⌘. on a model to add it here.",
       icon: Icon.Star,
       actions,
     };

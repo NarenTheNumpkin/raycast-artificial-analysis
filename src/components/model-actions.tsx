@@ -41,14 +41,12 @@ export function ModelActions({ data, model, controls, showDetails = true, panel 
             <Action
               title={data.comparison.ids.has(model.id) ? "Remove from Comparison" : "Add to Comparison"}
               icon={data.comparison.ids.has(model.id) ? Icon.MinusCircle : Icon.PlusCircle}
-              shortcut={{ modifiers: ["cmd", "shift"], key: "a" }}
               onAction={() => data.comparison.toggle(model.id)}
             />
             {data.comparison.ids.size ? (
               <Action.Push
                 title={`Open Comparison (${data.comparison.ids.size})`}
                 icon={Icon.BarChart}
-                shortcut={{ modifiers: ["cmd", "shift"], key: "v" }}
                 target={<CompareModels />}
               />
             ) : null}
@@ -67,11 +65,7 @@ export function ModelActions({ data, model, controls, showDetails = true, panel 
               content={data.snapshot ? modelSummary(model, data.snapshot, data.preferences) : model.name}
               shortcut={Keyboard.Shortcut.Common.Copy}
             />
-            <Action.CopyToClipboard
-              title="Copy Model Name"
-              content={model.name}
-              shortcut={Keyboard.Shortcut.Common.CopyName}
-            />
+            <Action.CopyToClipboard title="Copy Model Name" content={model.name} />
             <Action.CopyToClipboard title={`Copy ${METRICS[model.metric].title}`} content={String(model.value)} />
             <Action.CopyToClipboard title="Copy Model Link" content={modelUrl(model.slug)} />
           </ActionPanel.Section>
@@ -129,14 +123,9 @@ function FilterSection({ controls }: { controls: BrowseControls }) {
       <Action
         title={controls.favoritesOnly ? "Show All Models" : "Show Favorites Only"}
         icon={controls.favoritesOnly ? Icon.StarDisabled : Icon.Star}
-        shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
         onAction={() => controls.setFavoritesOnly(!controls.favoritesOnly)}
       />
-      <ActionPanel.Submenu
-        title="Filter by Provider"
-        icon={Icon.Filter}
-        shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
-      >
+      <ActionPanel.Submenu title="Filter by Provider" icon={Icon.Filter}>
         <Action
           title="All Providers"
           icon={controls.providerId === ALL_PROVIDERS ? Icon.Checkmark : Icon.Circle}

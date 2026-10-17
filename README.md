@@ -29,6 +29,10 @@
 
 The preferences also let you choose which statistics appear in model details.
 
+## Comparing Models
+
+Open **Compare Models**, or the **Compare** tile on the dashboard, and choose **Add a Model** to pick up to four models. Each metric shows every model side by side, with the best value in green and the worst in red. You can also choose **Add to Comparison** from any model's actions (`⌘ K`).
+
 ## Commands
 
 | Command               | Shows                                                    |
@@ -50,10 +54,6 @@ The preferences also let you choose which statistics appear in model details.
 | `⌘ P`    | Switch the ranking metric, or the dashboard filter |
 | `⌘ D`    | Show or hide the details panel                     |
 | `⌘ .`    | Add or remove a favorite                           |
-| `⌘ ⇧ A`  | Add or remove a model from the comparison          |
-| `⌘ ⇧ V`  | Open the comparison                                |
-| `⌘ ⇧ F`  | Show favorites only                                |
-| `⌘ ⇧ P`  | Filter by provider                                 |
 | `⌘ ⇧ C`  | Copy a model summary                               |
 | `⌘ R`    | Refresh rankings                                   |
 

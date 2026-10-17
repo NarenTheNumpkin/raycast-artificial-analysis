@@ -7,6 +7,7 @@ import { ALL_PROVIDERS, browseEntries } from "../lib/filters";
 import { logoSvg, providerIcon, svgImage } from "../lib/images";
 import { METRICS } from "../lib/metrics";
 import { rankModels, type RankedModel } from "../lib/models";
+import { CompareModels } from "./compare-models";
 import { LeaderboardList, LEADERBOARDS, type Leaderboard } from "./leaderboards";
 import { unavailableState, type EmptyState } from "./load-states";
 import { GeneralActions, ModelActions } from "./model-actions";
@@ -137,7 +138,7 @@ export function Dashboard() {
         </Grid.Section>
       ) : null}
       {data.snapshot && !searching ? (
-        <Grid.Section title="More Leaderboards" columns={5} aspectRatio="16/9" inset={Grid.Inset.Large}>
+        <Grid.Section title="More Leaderboards" columns={6} aspectRatio="16/9" inset={Grid.Inset.Large}>
           {tiles.map(({ board, subtitle }) => (
             <Grid.Item
               key={board.title}
@@ -157,6 +158,21 @@ export function Dashboard() {
               }
             />
           ))}
+          <Grid.Item
+            id="compare-models"
+            content={{
+              value: { source: Icon.BarChart, tintColor: Color.Blue },
+              tooltip: "Compare models side by side",
+            }}
+            title="Compare"
+            subtitle={data.comparison.ids.size ? `${data.comparison.ids.size} selected` : "Pick up to 4"}
+            actions={
+              <ActionPanel>
+                <Action.Push title="Open Comparison" icon={Icon.BarChart} target={<CompareModels />} />
+                <GeneralActions data={data} />
+              </ActionPanel>
+            }
+          />
         </Grid.Section>
       ) : null}
     </Grid>
