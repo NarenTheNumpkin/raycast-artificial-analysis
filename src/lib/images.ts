@@ -20,9 +20,18 @@ export function logoSvg(creator: string): string {
     : monogramSvg(creator, environment.appearance);
 }
 
+const providerIcons = new Map<string, Image.ImageLike>();
+
+/** The provider's bundled logo, or a generated monogram; memoized because every list row asks for one. */
 export function providerIcon(creator: string): Image.ImageLike {
-  const asset = providerAsset(creator);
-  return asset
-    ? { source: asset, tintColor: Color.PrimaryText }
-    : svgImage(monogramSvg(creator, environment.appearance));
+  const key = `${environment.appearance}:${creator}`;
+  let icon = providerIcons.get(key);
+  if (!icon) {
+    const asset = providerAsset(creator);
+    icon = asset
+      ? { source: asset, tintColor: Color.PrimaryText }
+      : svgImage(monogramSvg(creator, environment.appearance));
+    providerIcons.set(key, icon);
+  }
+  return icon;
 }
