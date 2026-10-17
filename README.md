@@ -1,6 +1,6 @@
 # Artificial Analysis for Raycast
 
-A focused AI model dashboard with a top five, provider logos, favorites, and searchable leaderboards powered by [Artificial Analysis](https://artificialanalysis.ai/).
+A clean AI model dashboard with a top five, provider logos, favorites, and searchable leaderboards powered by [Artificial Analysis](https://artificialanalysis.ai/).
 
 ## Install
 
@@ -15,7 +15,7 @@ Requires macOS, Raycast, npm, and **Node.js 22.22.2 or later** (Node.js 24 LTS w
    npm run dev
    ```
 
-3. Open **AI Model Rankings** in Raycast. Choose **Open Extension Preferences** on the setup screen and enter the key in its password field.
+3. Open **AI Model Rankings** in Raycast. On the setup screen, press `↵` to open preferences and enter the key in its password field, or `⌘↵` to create a key first.
 4. Reopen the command to see the top five. You can close setup without entering a key and return later.
 
 After registration, stopping development with `Ctrl+C` leaves all commands installed in Raycast. Run `npm run dev` again when editing the source. No key belongs in source files, terminal commands, or Git.
@@ -33,45 +33,67 @@ After registration, stopping development with `Ctrl+C` leaves all commands insta
 
 All commands share a dataset and cache. Each can have its own alias or hotkey in Raycast Settings → Extensions → Artificial Analysis.
 
-## Dashboard and model details
+## Dashboard
 
-The dashboard uses a three-column grid: five model cards and **Browse All Models**. Large card text is rendered locally as SVG artwork; Raycast controls native list font sizes. Provider logos work offline, with monogram fallbacks for unknown labs.
+**AI Model Rankings** opens a three-column grid:
+
+- **Top Models** shows five cards, one per model family, with the provider logo, the family name, and its Intelligence Index score. Gold, silver, and bronze rank pills mark the podium. The sixth card opens every evaluated model.
+- **More Leaderboards** opens Best Coding, Fastest, Lowest Latency, Lowest Price, or Favorites in one keystroke. Each tile previews the current leader or your favorites count.
+- The **provider dropdown** in the search bar (`⌘P`) narrows the dashboard to one lab. Cards keep their global ranks, and leaderboards opened from the tiles or the all-models card start with the same filter.
+
+Card artwork is rendered locally as SVG for light and dark mode. Provider logos work offline, with monogram fallbacks for unknown labs.
 
 The top five uses the strongest intelligence configuration per model family. Only recognized trailing reasoning-effort and fallback qualifiers are removed when grouping. Model sizes, releases, and distinct named versions are preserved. Dashboard ranks compare distinct families; full-list and detail ranks compare every evaluated configuration. Search and provider filtering preserve the relevant global ranks.
 
-Press `Enter` on a model to see its full configuration, a prominent active metric, and vertically aligned details. List rows show a provider logo, rank, name, and **one aligned value**. Extra statistics stay in details.
+## Leaderboards
 
-| Preference                   | Default             | Behavior                                             |
-| ---------------------------- | ------------------- | ---------------------------------------------------- |
-| Artificial Analysis API Key  | Needed to load data | Personal API key entered in Raycast's password field |
-| Show Coding Index            | Off                 | Include Coding Index in model details                |
-| Show Input and Output Prices | Off                 | Include both token prices in model details           |
-| Show Output Speed            | Off                 | Include output speed in model details                |
+Each row shows the provider logo, the rank and model family, its configuration (such as _Max_ or _Thinking_) in gray, and the ranking value on the right. A star marks favorites. The section header shows the metric, any active filters, how many models are listed, and when the data was retrieved.
 
-The active leaderboard metric is always visible. Intelligence Index and time-to-first-token latency are available in details; an em dash (`—`) means no measurement is available. Prices are **USD per million tokens**, and latency measures **time to first token**, rather than the time to finish an answer. Speed is aggregated across serving providers.
+- **Rank By** (`⌘P`) switches metrics in place, grouped into Quality, Performance, and Price. The pricing command offers input and output prices.
+- **Details panel** (`⌘D`) shows every metric for the selected model with its rank, and highlights the active metric. Raycast remembers whether the panel is open.
+- **Filter by Provider** (`⌘⇧P`) and **Show Favorites Only** (`⌘⇧F`) narrow the list. **Clear Filters** appears while a filter is active.
 
-## Filters, favorites, and actions
+## Model details
 
-Open the action panel with `⌘K`:
+Press `↵` on any model for its details: the family, provider, and configuration; the active metric's value and rank; and a table with every metric's value and rank across all evaluated configurations. The sidebar shows favorite status, the Intelligence Index version, retrieval time, and a link to the model's page.
 
-- **View:** top five, all models, favorites, coding, speed, pricing, or latency.
-- **Filter → Provider:** choose a lab, or return to all providers.
-- **Filter → Show Favorites Only:** restrict a full leaderboard to saved configurations. **Clear Filters** restores all providers and configurations.
-- **Copy:** model summary, name, active metric value, or source link.
-- **Open:** model page, original Intelligence Index leaderboard, or API-key management.
+| Preference                   | Default             | Behavior                                                        |
+| ---------------------------- | ------------------- | --------------------------------------------------------------- |
+| Artificial Analysis API Key  | Needed to load data | Personal API key entered in Raycast's password field            |
+| Show Coding Index            | On                  | Include Coding Index in model details and copied summaries      |
+| Show Input and Output Prices | On                  | Include both token prices in model details and copied summaries |
+| Show Output Speed            | On                  | Include output speed in model details and copied summaries      |
 
-**View Model Details**, **Add/Remove Favorite**, **Refresh Rankings**, and **Extension Preferences** are also directly available. Favorites use stable API model IDs and persist across launches and API-key changes. Favoriting a configuration keeps that exact configuration in the favorites view.
+Intelligence Index, time to first token, and the active leaderboard metric are always shown. An em dash (`—`) means no measurement is available. Prices are **USD per million tokens**, and latency measures **time to first token**, rather than the time to finish an answer. Speed and latency are medians across serving providers.
 
-Use `↑` / `↓` to select list entries, arrow keys to move between cards, `Enter` to open details, `⌘R` to refresh, and `⌘⇧C` to copy the model summary. The ranking selector in a full list changes metrics without another data request. The pricing command offers input and output selectors explicitly.
+## Actions and shortcuts
+
+Open the action panel with `⌘K`. Actions are grouped into model actions, copy actions, filters, and general actions; the panel's search finds any of them.
+
+| Shortcut | Action                                                                 |
+| -------- | ---------------------------------------------------------------------- |
+| `↵`      | View model details (in details: open the model on Artificial Analysis) |
+| `⌘↵`     | Open the model on Artificial Analysis                                  |
+| `⌘.`     | Add to or remove from favorites                                        |
+| `⌘D`     | Show or hide the details panel in leaderboards                         |
+| `⌘⇧C`    | Copy a model summary                                                   |
+| `⌘⌥C`    | Copy the model name                                                    |
+| `⌘P`     | Open the search-bar dropdown: Rank By, or the dashboard's provider     |
+| `⌘⇧P`    | Filter a leaderboard by provider                                       |
+| `⌘⇧F`    | Toggle favorites only                                                  |
+| `⌘R`     | Refresh rankings                                                       |
+
+**Browse Leaderboards** jumps to any other view, and you can also copy the active metric's value or the model link. Favorites use stable API model IDs and persist across launches and API-key changes. Favoriting a configuration keeps that exact configuration in the favorites view.
 
 ## Data and recovery
 
-- Cached data appears immediately. Opening a command refreshes a snapshot that is at least one hour old; manual refresh bypasses freshness.
+- Cached data appears immediately. Opening a command refreshes a snapshot that is at least one hour old; manual refresh (`⌘R`) bypasses freshness and confirms the result, or explains why it failed.
 - Every API page must succeed before a new complete snapshot replaces the old one. Changed index versions, malformed pagination, or duplicate IDs retain the last good snapshot.
 - API keys are isolated by a SHA-256 credential identifier. Normalized model data and retrieval metadata are cached through Raycast. Keys are sent only in the `x-api-key` header to Artificial Analysis, and never appear in URLs, copies, errors, or cache contents.
 - Rate-limit cooldowns survive command openings, manual refreshes, and cache-schema upgrades. The client honors `Retry-After` and `X-RateLimit-Reset`, with a one-hour fallback if the server provides neither. Each page costs one API request; see the [current tier limits](https://artificialanalysis.ai/data-api/docs).
 - Requests time out after 15 seconds per page. Closing a view cancels its request; reopening can immediately start a new request. There is no background polling.
-- The header shows retrieval age. Model details include the exact retrieval time, source, and API index version. Retrieval time describes when this installation fetched data.
+- Section headers show how long ago data was retrieved, and note when a refresh failed. Model details include the exact retrieval time, source, and API index version. Retrieval time describes when this installation fetched data.
+- When nothing can load, the view explains whether the key was rejected, the rate limit was reached (with the retry time), or Artificial Analysis could not be reached, and offers the matching fix.
 - Missing measurements are excluded only from the applicable leaderboard. Valid zeros remain, and ties use unrounded competition ranking (`1, 2, 2, 4`).
 
 Updating from the original cache format triggers one complete refresh for creator IDs and latency data. Your existing key, statistic preferences, and quota cooldown are preserved.
@@ -87,7 +109,7 @@ npm run lint
 npm run format:check
 ```
 
-Run a build before a standalone typecheck in a fresh checkout; it generates `raycast-env.d.ts`. Production output is in `dist/`. Tests use synthetic models and mocked HTTP responses to cover data recovery, ranking, family grouping, metric directions, SVG safety, provider assets, filtering, favorites persistence, and cancellation/reopening.
+Run a build before a standalone typecheck in a fresh checkout; it generates `raycast-env.d.ts`. `npm run build` checks a production (`dist` environment) build. Tests use synthetic models and mocked HTTP responses to cover data recovery, ranking, family grouping, per-metric standings, metric directions, SVG and markdown safety, provider assets, filtering, favorites persistence, and cancellation/reopening.
 
 The extension stays local; no publishing script or Git remote is configured.
 
