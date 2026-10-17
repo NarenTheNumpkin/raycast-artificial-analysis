@@ -73,6 +73,8 @@ describe("card assets", () => {
     "Mistral",
     "NVIDIA",
     "Amazon",
+    "Microsoft Azure",
+    "Perplexity AI",
   ])("bundles a logo for %s", (creator) => {
     const asset = providerAsset(creator);
     expect(asset).toBeDefined();
