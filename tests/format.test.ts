@@ -1,51 +1,68 @@
 import { describe, expect, it } from "vitest";
-import { displayMetrics, formatAge, formatPrice, modelSummary, modelUrl } from "../src/lib/format";
+import { detailMetrics, formatAge, formatPrice, formatRank, modelSummary, modelUrl } from "../src/lib/format";
+import { METRICS } from "../src/lib/metrics";
 import { rankModels } from "../src/lib/models";
+import { buildStandings, standingsFor } from "../src/lib/standings";
 import { model, NOW, snapshot } from "./fixtures";
 
 const defaults = { showCoding: false, showPrice: false, showSpeed: false };
+const everything = { showCoding: true, showPrice: true, showSpeed: true };
 
 describe("display and copy formatting", () => {
-  it("shows only Intelligence Index by default", () => {
-    expect(displayMetrics(rankModels([model()])[0], defaults)).toEqual([
-      { kind: "intelligence", text: "50.0", tooltip: "Intelligence Index: 50\nRank #1; higher is better." },
-    ]);
+  it("shows Intelligence Index, latency, and the active metric by default", () => {
+    expect(detailMetrics(defaults, "intelligence")).toEqual(["intelligence", "latency"]);
+    expect(detailMetrics(defaults, "speed")).toEqual(["intelligence", "speed", "latency"]);
+    expect(detailMetrics(defaults, "outputPrice")).toEqual(["intelligence", "latency", "inputPrice", "outputPrice"]);
   });
 
-  it("shows all configured statistics with explicit price units and input/output order", () => {
-    const metrics = displayMetrics(rankModels([model()])[0], { showCoding: true, showPrice: true, showSpeed: true });
-    expect(metrics.map(({ text }) => text)).toEqual(["50.0", "Code 42.0", "$0.25 / $1.50", "150.5 t/s"]);
-    expect(metrics.find(({ kind }) => kind === "price")?.tooltip).toContain("USD per 1M tokens (input / output)");
-  });
-
-  it("allows each optional statistic independently", () => {
-    const entry = rankModels([model()])[0];
-    expect(displayMetrics(entry, { ...defaults, showCoding: true }).map(({ kind }) => kind)).toEqual([
+  it("allows each optional statistic independently, in grouped display order", () => {
+    expect(detailMetrics({ ...defaults, showCoding: true }, "intelligence")).toEqual([
       "intelligence",
       "coding",
+      "latency",
     ]);
-    expect(displayMetrics(entry, { ...defaults, showPrice: true }).map(({ kind }) => kind)).toEqual([
+    expect(detailMetrics({ ...defaults, showPrice: true }, "intelligence")).toEqual([
       "intelligence",
-      "price",
+      "latency",
+      "inputPrice",
+      "outputPrice",
     ]);
-    expect(displayMetrics(entry, { ...defaults, showSpeed: true }).map(({ kind }) => kind)).toEqual([
+    expect(detailMetrics({ ...defaults, showSpeed: true }, "latency")).toEqual(["intelligence", "speed", "latency"]);
+    expect(detailMetrics(everything, "coding")).toEqual([
       "intelligence",
+      "coding",
       "speed",
+      "latency",
+      "inputPrice",
+      "outputPrice",
     ]);
-    expect(entry.rank).toBe(1);
+  });
+
+  it("ranks every metric across all configurations and leaves unmeasured metrics unranked", () => {
+    const models = [
+      model({ id: "a", intelligence: 70, speed: 50, inputPrice: 2 }),
+      model({ id: "b", intelligence: 60, speed: null, inputPrice: 1 }),
+      model({ id: "c", intelligence: 60, speed: 90, inputPrice: -1 }),
+    ];
+    const table = buildStandings(models);
+    const [intelligence, , speed, , inputPrice] = standingsFor(models[1], table);
+    expect(intelligence).toEqual({ metric: "intelligence", value: 60, rank: 2, total: 3 });
+    expect(speed).toEqual({ metric: "speed", value: null, rank: undefined, total: 2 });
+    expect(inputPrice).toEqual({ metric: "inputPrice", value: 1, rank: 1, total: 2 });
+    expect(standingsFor(models[2], table, ["inputPrice"])).toEqual([
+      { metric: "inputPrice", value: null, rank: undefined, total: 2 },
+    ]);
+    expect(formatRank(2, 3)).toBe("#2 of 3");
+    expect(formatRank(undefined, 3)).toBe("Not ranked");
   });
 
   it("distinguishes unavailable values from measured zeros", () => {
-    const options = { showCoding: true, showPrice: true, showSpeed: true };
-    const missing = rankModels([model({ coding: null, inputPrice: null, outputPrice: null, speed: null })])[0];
-    expect(displayMetrics(missing, options).map(({ text }) => text)).toEqual(["50.0", "Code —", "— / —", "—"]);
-    const zero = rankModels([model({ intelligence: 0, coding: 0, inputPrice: 0, outputPrice: 0, speed: 0 })])[0];
-    expect(displayMetrics(zero, options).map(({ text }) => text)).toEqual([
-      "0.0",
-      "Code 0.0",
-      "$0.00 / $0.00",
-      "0 t/s",
-    ]);
+    const keys = ["coding", "inputPrice", "outputPrice", "speed"] as const;
+    const missing = model({ coding: null, inputPrice: null, outputPrice: null, speed: null });
+    expect(keys.map((key) => METRICS[key].format(missing[key]))).toEqual(["—", "—", "—", "—"]);
+    const zero = model({ intelligence: 0, coding: 0, inputPrice: 0, outputPrice: 0, speed: 0 });
+    expect(keys.map((key) => METRICS[key].format(zero[key]))).toEqual(["0.0", "$0.00", "$0.00", "0 t/s"]);
+    expect(METRICS.intelligence.format(zero.intelligence)).toBe("0.0");
   });
 
   it("preserves small token prices rather than rounding them to zero", () => {
@@ -62,7 +79,7 @@ describe("display and copy formatting", () => {
     expect(basic).toContain("https://artificialanalysis.ai/models/alpha-high");
     expect(basic).toContain("Retrieved: 2026-10-17T08:00:00.000Z");
     expect(basic).not.toContain("Coding Index:");
-    const full = modelSummary(entry, snapshot(), { showCoding: true, showPrice: true, showSpeed: true });
+    const full = modelSummary(entry, snapshot(), everything);
     expect(full).toContain("Coding Index: 42");
     expect(full).toContain("$0.25 input / $1.50 output");
     expect(full).toContain("150.5 tokens/s");

@@ -1,5 +1,5 @@
 import { Action, ActionPanel, Icon, Keyboard, openExtensionPreferences } from "@raycast/api";
-import type { BrowseControls, RankingsData } from "../hooks/use-rankings";
+import { hasActiveFilters, type BrowseControls, type RankingsData } from "../hooks/use-rankings";
 import { LEADERBOARD_URL } from "../lib/api";
 import { ALL_PROVIDERS } from "../lib/filters";
 import { modelSummary, modelUrl } from "../lib/format";
@@ -15,9 +15,14 @@ interface ModelActionsProps {
   controls?: BrowseControls;
   /** Offer a push to the full details view. Off inside the details view itself. */
   showDetails?: boolean;
+  /** The list's stats side panel, when the view has one. */
+  panel?: { visible: boolean; toggle: () => void };
 }
 
-export function ModelActions({ data, model, controls, showDetails = true }: ModelActionsProps) {
+export function ModelActions({ data, model, controls, showDetails = true, panel }: ModelActionsProps) {
+  const filters = controls && data.snapshot ? <FilterSection controls={controls} /> : null;
+  // Empty views lead with Clear Filters when filters hide every result, and with Refresh otherwise.
+  const filtersFirst = model !== undefined || (controls !== undefined && hasActiveFilters(controls));
   return (
     <ActionPanel title={model?.name}>
       {model ? (
@@ -32,6 +37,14 @@ export function ModelActions({ data, model, controls, showDetails = true }: Mode
             ) : null}
             <Action.OpenInBrowser title="Open on Artificial Analysis" url={modelUrl(model.slug)} />
             <FavoriteAction data={data} model={model} />
+            {panel ? (
+              <Action
+                title={panel.visible ? "Hide Details Panel" : "Show Details Panel"}
+                icon={Icon.AppWindowSidebarRight}
+                shortcut={{ modifiers: ["cmd"], key: "d" }}
+                onAction={panel.toggle}
+              />
+            ) : null}
           </ActionPanel.Section>
           <ActionPanel.Section>
             <Action.CopyToClipboard
@@ -49,7 +62,7 @@ export function ModelActions({ data, model, controls, showDetails = true }: Mode
           </ActionPanel.Section>
         </>
       ) : null}
-      {controls ? <FilterSection controls={controls} /> : null}
+      {filtersFirst ? filters : null}
       <ActionPanel.Section>
         <Action
           title="Refresh Rankings"
@@ -61,6 +74,7 @@ export function ModelActions({ data, model, controls, showDetails = true }: Mode
         <Action.OpenInBrowser title="Open Intelligence Index Leaderboard" url={LEADERBOARD_URL} />
         <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
       </ActionPanel.Section>
+      {filtersFirst ? null : filters}
     </ActionPanel>
   );
 }
@@ -78,9 +92,26 @@ function FavoriteAction({ data, model }: { data: RankingsData; model: RankedMode
 }
 
 function FilterSection({ controls }: { controls: BrowseControls }) {
-  const filtered = controls.providerId !== ALL_PROVIDERS || controls.favoritesOnly;
   return (
     <ActionPanel.Section>
+      {hasActiveFilters(controls) ? (
+        <Action
+          title="Clear Filters"
+          icon={Icon.XMarkCircle}
+          onAction={() => {
+            controls.setProviderId(ALL_PROVIDERS);
+            controls.setFavoritesOnly(false);
+          }}
+        />
+      ) : null}
+      {controls.allowFavorites ? (
+        <Action
+          title={controls.favoritesOnly ? "Show All Models" : "Show Favorites Only"}
+          icon={controls.favoritesOnly ? Icon.StarDisabled : Icon.Star}
+          shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
+          onAction={() => controls.setFavoritesOnly(!controls.favoritesOnly)}
+        />
+      ) : null}
       <ActionPanel.Submenu
         title="Filter by Provider"
         icon={Icon.Filter}
@@ -100,24 +131,6 @@ function FilterSection({ controls }: { controls: BrowseControls }) {
           />
         ))}
       </ActionPanel.Submenu>
-      {controls.allowFavorites ? (
-        <Action
-          title={controls.favoritesOnly ? "Show All Models" : "Show Favorites Only"}
-          icon={controls.favoritesOnly ? Icon.StarDisabled : Icon.Star}
-          shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
-          onAction={() => controls.setFavoritesOnly(!controls.favoritesOnly)}
-        />
-      ) : null}
-      {filtered ? (
-        <Action
-          title="Clear Filters"
-          icon={Icon.XMarkCircle}
-          onAction={() => {
-            controls.setProviderId(ALL_PROVIDERS);
-            controls.setFavoritesOnly(false);
-          }}
-        />
-      ) : null}
     </ActionPanel.Section>
   );
 }

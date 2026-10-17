@@ -27,6 +27,19 @@ export function formatPrice(value: number | null): string {
   return currency.format(value);
 }
 
+export function isPriceMetric(metric: MetricKey): boolean {
+  return metric === "inputPrice" || metric === "outputPrice";
+}
+
+/** Metrics grouped for selectors and detail tables, in display order. */
+export const METRIC_GROUPS: { title: string; metrics: MetricKey[] }[] = [
+  { title: "Quality", metrics: ["intelligence", "coding"] },
+  { title: "Performance", metrics: ["speed", "latency"] },
+  { title: "Price per 1M Tokens", metrics: ["inputPrice", "outputPrice"] },
+];
+
+export const METRIC_ORDER: MetricKey[] = METRIC_GROUPS.flatMap((group) => group.metrics);
+
 export const METRICS: Record<MetricKey, MetricDefinition> = {
   intelligence: {
     title: "Intelligence Index",

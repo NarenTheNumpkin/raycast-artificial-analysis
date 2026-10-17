@@ -1,12 +1,13 @@
-import { Detail } from "@raycast/api";
-import { useMemo } from "react";
+import { Color, Detail, List } from "@raycast/api";
+import { Fragment, useMemo } from "react";
 import { failureMessage, useRankingsData } from "../hooks/use-rankings";
 import { LEADERBOARD_URL } from "../lib/api";
-import { familyName } from "../lib/families";
-import { formatRetrievedAt } from "../lib/format";
+import { configurationLabel, familyName } from "../lib/families";
+import { detailMetrics, formatRetrievedAt, formatStanding, type MetricPreferences } from "../lib/format";
 import { providerIcon } from "../lib/images";
-import { METRICS, type MetricKey } from "../lib/metrics";
-import { rankModels } from "../lib/models";
+import { METRIC_GROUPS, METRICS, type MetricKey } from "../lib/metrics";
+import { rankModels, type RankedModel } from "../lib/models";
+import { standingsFor, type StandingsTable } from "../lib/standings";
 import { ModelActions } from "./model-actions";
 import { Setup } from "./setup";
 
@@ -69,6 +70,49 @@ export function ModelDetails({ modelId, metric }: { modelId: string; metric: Met
         </Detail.Metadata>
       }
       actions={<ModelActions data={data} model={model} showDetails={false} />}
+    />
+  );
+}
+
+/** Compact stats for the selected list row: every shown metric with its rank across all configurations. */
+export function ModelDetailPanel({
+  model,
+  standings,
+  preferences,
+}: {
+  model: RankedModel;
+  standings: StandingsTable;
+  preferences: MetricPreferences;
+}) {
+  const shown = new Set(detailMetrics(preferences, model.metric));
+  const configuration = configurationLabel(model.name);
+  return (
+    <List.Item.Detail
+      metadata={
+        <List.Item.Detail.Metadata>
+          <List.Item.Detail.Metadata.Label title="Provider" text={model.creator} icon={providerIcon(model.creator)} />
+          {configuration ? <List.Item.Detail.Metadata.Label title="Configuration" text={configuration} /> : null}
+          {METRIC_GROUPS.map((group) => {
+            const metrics = group.metrics.filter((metric) => shown.has(metric));
+            return metrics.length ? (
+              <Fragment key={group.title}>
+                <List.Item.Detail.Metadata.Separator />
+                <List.Item.Detail.Metadata.Label title={group.title} />
+                {standingsFor(model, standings, metrics).map((standing) => (
+                  <List.Item.Detail.Metadata.Label
+                    key={standing.metric}
+                    title={METRICS[standing.metric].title}
+                    text={{
+                      value: formatStanding(standing),
+                      color: standing.metric === model.metric ? Color.Blue : undefined,
+                    }}
+                  />
+                ))}
+              </Fragment>
+            ) : null;
+          })}
+        </List.Item.Detail.Metadata>
+      }
     />
   );
 }

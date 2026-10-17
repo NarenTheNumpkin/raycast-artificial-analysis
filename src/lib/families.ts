@@ -12,13 +12,28 @@ function configurationQualifier(value: string): boolean {
   );
 }
 
-export function familyName(name: string): string {
-  let base = name.trim();
+/** Splits trailing configuration qualifiers, such as "(High)", from the model family name. */
+export function splitModelName(name: string): { family: string; qualifiers: string[] } {
+  let family = name.trim();
+  const groups: string[][] = [];
   for (;;) {
-    const suffix = /^(.*?)\s*\(([^()]*)\)$/.exec(base);
-    if (!suffix || !suffix[1].trim() || !suffix[2].split(/[,;]/).every(configurationQualifier)) return base;
-    base = suffix[1].trim();
+    const suffix = /^(.*?)\s*\(([^()]*)\)$/.exec(family);
+    if (!suffix || !suffix[1].trim()) break;
+    const parts = suffix[2].split(/[,;]/);
+    if (!parts.every(configurationQualifier)) break;
+    groups.unshift(parts.map((part) => part.trim()));
+    family = suffix[1].trim();
   }
+  return { family, qualifiers: groups.flat() };
+}
+
+export function familyName(name: string): string {
+  return splitModelName(name).family;
+}
+
+/** The configuration qualifiers removed by {@link familyName}, e.g. "High · No Fallback". */
+export function configurationLabel(name: string): string {
+  return splitModelName(name).qualifiers.join(" · ");
 }
 
 export function familyKey(model: Model): string {

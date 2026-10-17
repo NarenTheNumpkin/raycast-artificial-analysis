@@ -1,13 +1,27 @@
-import { List } from "@raycast/api";
+import { Color, Icon, List } from "@raycast/api";
 import { useMemo, useState } from "react";
-import { failureMessage, useBrowseControls, useNow, useRankingsData } from "../hooks/use-rankings";
-import { ALL_PROVIDERS, browseEntries } from "../lib/filters";
-import { formatAge } from "../lib/format";
+import { useCachedFlag } from "../hooks/use-cached-flag";
+import {
+  failureMessage,
+  updatedText,
+  useBrowseControls,
+  useNow,
+  useRankingsData,
+  type BrowseControls,
+  type RankingsData,
+} from "../hooks/use-rankings";
+import { configurationLabel, familyName } from "../lib/families";
+import { browseEntries } from "../lib/filters";
 import { providerIcon } from "../lib/images";
-import { METRICS, type MetricKey } from "../lib/metrics";
+import { isPriceMetric, METRIC_GROUPS, METRICS, type MetricKey } from "../lib/metrics";
 import { rankModels } from "../lib/models";
+import { buildStandings } from "../lib/standings";
+import { METRIC_ICONS } from "./leaderboards";
 import { ModelActions } from "./model-actions";
+import { ModelDetailPanel } from "./model-details";
 import { Setup } from "./setup";
+
+const PRICE_METRICS: MetricKey[] = ["inputPrice", "outputPrice"];
 
 export function RankingsList({
   initialMetric = "intelligence",
@@ -23,21 +37,24 @@ export function RankingsList({
   const [search, setSearch] = useState("");
   const [metric, setMetric] = useState(initialMetric);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showingPanel, setShowingPanel] = useCachedFlag("show-details-panel", false);
   const controls = useBrowseControls(data.snapshot, initialFavoritesOnly);
   const ranked = useMemo(() => rankModels(data.snapshot?.models ?? [], metric), [data.snapshot, metric]);
-  const visible = useMemo(
+  const standings = useMemo(() => buildStandings(data.snapshot?.models ?? []), [data.snapshot]);
+  const rows = useMemo(
     () =>
       browseEntries(
         ranked,
         search,
         { providerId: controls.providerId, favoritesOnly: controls.favoritesOnly },
         data.favorites.ids,
-      ),
+      ).map((model) => ({ model, family: familyName(model.name), configuration: configurationLabel(model.name) })),
     [ranked, search, controls.providerId, controls.favoritesOnly, data.favorites.ids],
   );
   if (data.needsApiKey) return <Setup />;
-  const error = failureMessage(data);
   const definition = METRICS[metric];
+  const selected = rows.find(({ model }) => model.id === selectedId)?.model ?? rows[0]?.model;
+  const empty = emptyState(data, controls, search, definition.title);
   return (
     <List
       onSelectionChange={setSelectedId}
@@ -47,50 +64,121 @@ export function RankingsList({
       searchText={search}
       onSearchTextChange={setSearch}
       isLoading={data.isLoading}
+      isShowingDetail={showingPanel && rows.length > 0}
       searchBarAccessory={
         <List.Dropdown tooltip="Rank By" value={metric} onChange={(value) => setMetric(value as MetricKey)}>
-          {(pricing ? (["inputPrice", "outputPrice"] as const) : (Object.keys(METRICS) as MetricKey[])).map((key) => (
-            <List.Dropdown.Item key={key} title={METRICS[key].title} value={key} />
-          ))}
+          {pricing
+            ? PRICE_METRICS.map((key) => (
+                <List.Dropdown.Item key={key} title={METRICS[key].title} value={key} icon={METRIC_ICONS[key]} />
+              ))
+            : METRIC_GROUPS.map((group) => (
+                <List.Dropdown.Section key={group.title} title={group.title}>
+                  {group.metrics.map((key) => (
+                    <List.Dropdown.Item key={key} title={METRICS[key].title} value={key} icon={METRIC_ICONS[key]} />
+                  ))}
+                </List.Dropdown.Section>
+              ))}
         </List.Dropdown>
       }
     >
       <List.EmptyView
-        title={
-          error && !data.snapshot
-            ? "Unable to Load Rankings"
-            : data.isLoading && !data.snapshot
-              ? "Loading Models…"
-              : "No Matching Measurements"
-        }
-        description={
-          error ?? `No models match your search with a published ${definition.title.toLowerCase()} measurement.`
-        }
+        title={empty.title}
+        description={empty.description}
+        icon={empty.icon}
         actions={<ModelActions data={data} controls={controls} />}
       />
       {data.snapshot ? (
         <List.Section
-          title={`${controls.favoritesOnly ? "Favorites · " : ""}${definition.title}${metric === "inputPrice" || metric === "outputPrice" ? " · USD/1M" : ""}${controls.providerId !== ALL_PROVIDERS ? ` · ${controls.creators.find((creator) => creator.id === controls.providerId)?.name ?? "Provider"}` : ""}`}
-          subtitle={`Artificial Analysis · ${error ? "Cached · refresh failed" : formatAge(data.snapshot.fetchedAt, now)}`}
+          title={sectionTitle(controls, metric)}
+          subtitle={`${countText(rows.length, ranked.length)} · ${updatedText(data, now)}`}
         >
-          {visible.map((model) => (
-            <List.Item
-              key={model.id}
-              id={model.id}
-              title={{ value: `${model.rank}. ${model.name}`, tooltip: model.name }}
-              icon={providerIcon(model.creator)}
-              accessories={[
-                { text: definition.format(model.value), tooltip: `${definition.title} · ${definition.unit}` },
-              ]}
-              actions={
-                (visible.some((entry) => entry.id === selectedId) ? selectedId : visible[0]?.id) === model.id ? (
-                  <ModelActions data={data} model={model} controls={controls} />
-                ) : undefined
-              }
-            />
-          ))}
+          {rows.map(({ model, family, configuration }) => {
+            const isSelected = model.id === selected?.id;
+            const favorite = data.favorites.ids.has(model.id);
+            const accessories: List.Item.Accessory[] = [];
+            if (favorite)
+              accessories.push({ icon: { source: Icon.Star, tintColor: Color.Yellow }, tooltip: "Favorite" });
+            if (!showingPanel) {
+              accessories.push({
+                text: { value: definition.format(model.value), color: Color.PrimaryText },
+                tooltip: `${definition.title} · ${definition.unit}`,
+              });
+            }
+            return (
+              <List.Item
+                key={model.id}
+                id={model.id}
+                icon={{ value: providerIcon(model.creator), tooltip: model.creator }}
+                title={{ value: `${model.rank}. ${family}`, tooltip: model.name }}
+                subtitle={configuration}
+                accessories={accessories}
+                detail={
+                  showingPanel && isSelected ? (
+                    <ModelDetailPanel model={model} standings={standings} preferences={data.preferences} />
+                  ) : undefined
+                }
+                actions={
+                  isSelected ? (
+                    <ModelActions
+                      data={data}
+                      model={model}
+                      controls={controls}
+                      panel={{ visible: showingPanel, toggle: () => setShowingPanel(!showingPanel) }}
+                    />
+                  ) : undefined
+                }
+              />
+            );
+          })}
         </List.Section>
       ) : null}
     </List>
   );
+}
+
+function sectionTitle(controls: BrowseControls, metric: MetricKey): string {
+  const provider = controls.creators.find((creator) => creator.id === controls.providerId);
+  const metricTitle = `${METRICS[metric].title}${isPriceMetric(metric) ? " per 1M Tokens" : ""}`;
+  return [controls.favoritesOnly ? "Favorites" : undefined, metricTitle, provider?.name].filter(Boolean).join(" · ");
+}
+
+function countText(shown: number, total: number): string {
+  const noun = total === 1 ? "model" : "models";
+  return shown === total ? `${total} ${noun}` : `${shown} of ${total} ${noun}`;
+}
+
+function emptyState(
+  data: RankingsData,
+  controls: BrowseControls,
+  search: string,
+  metricTitle: string,
+): { title: string; description: string; icon: Icon } {
+  const error = failureMessage(data);
+  if (!data.snapshot && error) return { title: "Couldn’t Load Rankings", description: error, icon: Icon.Warning };
+  if (!data.snapshot) {
+    return {
+      title: "Loading Rankings…",
+      description: "Fetching the latest data from Artificial Analysis.",
+      icon: Icon.Hourglass,
+    };
+  }
+  if (controls.favoritesOnly && data.favorites.ids.size === 0) {
+    return {
+      title: "No Favorites Yet",
+      description: "Show all models with ⌘⇧F, then press ⌘. on a model to add it here.",
+      icon: Icon.Star,
+    };
+  }
+  if (search.trim()) {
+    return {
+      title: "No Matching Models",
+      description: "Try another model or provider name, or clear your filters.",
+      icon: Icon.MagnifyingGlass,
+    };
+  }
+  return {
+    title: "No Models to Show",
+    description: `No models in this view have a published ${metricTitle} measurement.`,
+    icon: Icon.MagnifyingGlass,
+  };
 }

@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { browseCardSvg, modelCardSvg, monogramSvg } from "../src/lib/cards";
-import { distinctModelRankings, familyName } from "../src/lib/families";
+import { configurationLabel, distinctModelRankings, familyName } from "../src/lib/families";
 import { rankModels } from "../src/lib/models";
 import { providerAsset, providerInitials } from "../src/lib/providers";
 import { model } from "./fixtures";
@@ -18,6 +18,16 @@ describe("distinct model dashboard", () => {
     ["Model (128K Context)", "Model (128K Context)"],
   ])("normalizes %s without removing model identity", (name, expected) => {
     expect(familyName(name)).toBe(expected);
+  });
+
+  it.each([
+    ["Claude Opus 5.5 (Max, Default Fallback)", "Max · Default Fallback"],
+    ["Claude Opus 5.5 (High) (No Fallback)", "High · No Fallback"],
+    ["Model (Reasoning Effort: High)", "Reasoning Effort: High"],
+    ["DeepSeek V3.2 (Speciale)", ""],
+    ["Kimi K3 Thinking", ""],
+  ])("labels the configuration of %s", (name, expected) => {
+    expect(configurationLabel(name)).toBe(expected);
   });
 
   it("chooses each family's best configuration without merging providers or versions", () => {

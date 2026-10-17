@@ -1,7 +1,7 @@
 import { getPreferenceValues } from "@raycast/api";
 import { useEffect, useMemo, useState } from "react";
 import { ALL_PROVIDERS, providers } from "../lib/filters";
-import { formatRetrievedAt } from "../lib/format";
+import { formatAge, formatRetrievedAt } from "../lib/format";
 import type { LeaderboardSnapshot } from "../lib/models";
 import { useFavorites } from "./use-favorites";
 import { useLeaderboard } from "./use-leaderboard";
@@ -26,6 +26,10 @@ export function useBrowseControls(
 
 export type BrowseControls = ReturnType<typeof useBrowseControls>;
 
+export function hasActiveFilters(controls: BrowseControls): boolean {
+  return controls.providerId !== ALL_PROVIDERS || controls.favoritesOnly;
+}
+
 export function useNow() {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -33,6 +37,12 @@ export function useNow() {
     return () => clearInterval(timer);
   }, []);
   return now;
+}
+
+/** Data freshness for section subtitles, e.g. "Updated 5m ago" or "Updated 2h ago · Refresh failed". */
+export function updatedText(data: RankingsData, now: number): string {
+  if (!data.snapshot) return "";
+  return `Updated ${formatAge(data.snapshot.fetchedAt, now)}${data.error ? " · Refresh failed" : ""}`;
 }
 
 export function failureMessage(data: RankingsData): string | undefined {
