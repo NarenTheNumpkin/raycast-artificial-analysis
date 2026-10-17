@@ -66,14 +66,7 @@ export function RankingsList({
         description={
           error ?? `No models match your search with a published ${definition.title.toLowerCase()} measurement.`
         }
-        actions={
-          <ModelActions
-            preferences={data.preferences}
-            favorites={data.favorites}
-            controls={controls}
-            refresh={() => data.refresh()}
-          />
-        }
+        actions={<ModelActions data={data} controls={controls} />}
       />
       {data.snapshot ? (
         <List.Section
@@ -91,14 +84,7 @@ export function RankingsList({
               ]}
               actions={
                 (visible.some((entry) => entry.id === selectedId) ? selectedId : visible[0]?.id) === model.id ? (
-                  <ModelActions
-                    model={model}
-                    snapshot={data.snapshot}
-                    preferences={data.preferences}
-                    favorites={data.favorites}
-                    controls={controls}
-                    refresh={() => data.refresh()}
-                  />
+                  <ModelActions data={data} model={model} controls={controls} />
                 ) : undefined
               }
             />

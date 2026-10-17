@@ -68,16 +68,7 @@ export function ModelDetails({ modelId, metric }: { modelId: string; metric: Met
           <Detail.Metadata.Link title="Source" text="Artificial Analysis" target={LEADERBOARD_URL} />
         </Detail.Metadata>
       }
-      actions={
-        <ModelActions
-          model={model}
-          snapshot={data.snapshot}
-          preferences={p}
-          favorites={data.favorites}
-          refresh={() => data.refresh()}
-          details={false}
-        />
-      }
+      actions={<ModelActions data={data} model={model} showDetails={false} />}
     />
   );
 }

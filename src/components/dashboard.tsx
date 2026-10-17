@@ -52,14 +52,7 @@ export function Dashboard() {
         title={error ? "Unable to Load Rankings" : data.isLoading ? "Loading Models…" : "No Matching Models"}
         description={error ?? "Try a different model name or provider."}
         icon={error ? Icon.ExclamationMark : Icon.MagnifyingGlass}
-        actions={
-          <ModelActions
-            preferences={data.preferences}
-            favorites={data.favorites}
-            controls={controls}
-            refresh={() => data.refresh()}
-          />
-        }
+        actions={<ModelActions data={data} controls={controls} />}
       />
       {data.snapshot ? (
         <Grid.Section
@@ -75,16 +68,7 @@ export function Dashboard() {
                 tooltip: `#${model.rank} ${model.name}\n${model.creator} · Intelligence Index ${model.value}`,
               }}
               title={model.creator}
-              actions={
-                <ModelActions
-                  model={model}
-                  snapshot={data.snapshot}
-                  preferences={data.preferences}
-                  favorites={data.favorites}
-                  controls={controls}
-                  refresh={() => data.refresh()}
-                />
-              }
+              actions={<ModelActions data={data} model={model} controls={controls} />}
             />
           ))}
           {visible.length ? (

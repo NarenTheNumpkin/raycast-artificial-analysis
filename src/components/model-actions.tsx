@@ -1,127 +1,123 @@
 import { Action, ActionPanel, Icon, Keyboard, openExtensionPreferences } from "@raycast/api";
-import type { useFavorites } from "../hooks/use-favorites";
-import type { BrowseControls } from "../hooks/use-rankings";
-import { API_KEY_URL, LEADERBOARD_URL } from "../lib/api";
+import type { BrowseControls, RankingsData } from "../hooks/use-rankings";
+import { LEADERBOARD_URL } from "../lib/api";
 import { ALL_PROVIDERS } from "../lib/filters";
-import { modelSummary, modelUrl, type MetricPreferences } from "../lib/format";
+import { modelSummary, modelUrl } from "../lib/format";
 import { providerIcon } from "../lib/images";
 import { METRICS } from "../lib/metrics";
-import type { LeaderboardSnapshot, RankedModel } from "../lib/models";
-import { Dashboard } from "./dashboard";
+import type { RankedModel } from "../lib/models";
+import { LeaderboardsSubmenu } from "./leaderboards";
 import { ModelDetails } from "./model-details";
-import { RankingsList } from "./rankings-list";
 
-interface ActionsProps {
+interface ModelActionsProps {
+  data: RankingsData;
   model?: RankedModel;
-  snapshot?: LeaderboardSnapshot;
-  preferences: MetricPreferences;
-  refresh: () => Promise<void>;
-  details?: boolean;
-  favorites: ReturnType<typeof useFavorites>;
   controls?: BrowseControls;
+  /** Offer a push to the full details view. Off inside the details view itself. */
+  showDetails?: boolean;
 }
 
-export function ModelActions({
-  model,
-  snapshot,
-  preferences,
-  refresh,
-  details = true,
-  favorites,
-  controls,
-}: ActionsProps) {
+export function ModelActions({ data, model, controls, showDetails = true }: ModelActionsProps) {
   return (
-    <ActionPanel>
-      {model && details ? (
-        <Action.Push
-          title="View Model Details"
-          icon={Icon.Sidebar}
-          target={<ModelDetails modelId={model.id} metric={model.metric} />}
-        />
-      ) : null}
+    <ActionPanel title={model?.name}>
       {model ? (
-        <Action
-          title={favorites.ids.has(model.id) ? "Remove from Favorites" : "Add to Favorites"}
-          icon={favorites.ids.has(model.id) ? Icon.StarDisabled : Icon.Star}
-          shortcut={Keyboard.Shortcut.Common.Pin}
-          onAction={() => favorites.toggle(model.id)}
-        />
-      ) : null}
-      <Action
-        title="Refresh Rankings"
-        icon={Icon.ArrowClockwise}
-        shortcut={Keyboard.Shortcut.Common.Refresh}
-        onAction={refresh}
-      />
-      <ActionPanel.Submenu title="View" icon={Icon.AppWindowList}>
-        <Action.Push title="Top Five Models" icon={Icon.Stars} target={<Dashboard />} />
-        <Action.Push title="All AI Models" icon={Icon.List} target={<RankingsList />} />
-        <Action.Push title="Favorites" icon={Icon.Star} target={<RankingsList initialFavoritesOnly />} />
-        <Action.Push title="Best Coding Models" icon={Icon.Code} target={<RankingsList initialMetric="coding" />} />
-        <Action.Push title="Fastest AI Models" icon={Icon.Bolt} target={<RankingsList initialMetric="speed" />} />
-        <Action.Push
-          title="Model Pricing"
-          icon={Icon.Coins}
-          target={<RankingsList initialMetric="inputPrice" pricing />}
-        />
-        <Action.Push
-          title="Lowest Latency Models"
-          icon={Icon.Stopwatch}
-          target={<RankingsList initialMetric="latency" />}
-        />
-      </ActionPanel.Submenu>
-      {controls ? (
-        <ActionPanel.Submenu title="Filter" icon={Icon.Filter}>
-          <ActionPanel.Submenu title="Provider" icon={Icon.Person}>
-            <Action
-              title="All Providers"
-              icon={controls.providerId === ALL_PROVIDERS ? Icon.Checkmark : Icon.Circle}
-              onAction={() => controls.setProviderId(ALL_PROVIDERS)}
-            />
-            {controls.creators.map((creator) => (
-              <Action
-                key={creator.id}
-                title={creator.name}
-                icon={controls.providerId === creator.id ? Icon.Checkmark : providerIcon(creator.name)}
-                onAction={() => controls.setProviderId(creator.id)}
+        <>
+          <ActionPanel.Section>
+            {showDetails ? (
+              <Action.Push
+                title="View Model Details"
+                icon={Icon.Sidebar}
+                target={<ModelDetails modelId={model.id} metric={model.metric} />}
               />
-            ))}
-          </ActionPanel.Submenu>
-          {controls.allowFavorites ? (
-            <Action
-              title={controls.favoritesOnly ? "Show All Models" : "Show Favorites Only"}
-              icon={Icon.Star}
-              onAction={() => controls.setFavoritesOnly(!controls.favoritesOnly)}
+            ) : null}
+            <Action.OpenInBrowser title="Open on Artificial Analysis" url={modelUrl(model.slug)} />
+            <FavoriteAction data={data} model={model} />
+          </ActionPanel.Section>
+          <ActionPanel.Section>
+            <Action.CopyToClipboard
+              title="Copy Summary"
+              content={data.snapshot ? modelSummary(model, data.snapshot, data.preferences) : model.name}
+              shortcut={Keyboard.Shortcut.Common.Copy}
             />
-          ) : null}
-          <Action
-            title="Clear Filters"
-            icon={Icon.XMarkCircle}
-            onAction={() => {
-              controls.setProviderId(ALL_PROVIDERS);
-              controls.setFavoritesOnly(false);
-            }}
-          />
-        </ActionPanel.Submenu>
+            <Action.CopyToClipboard
+              title="Copy Model Name"
+              content={model.name}
+              shortcut={Keyboard.Shortcut.Common.CopyName}
+            />
+            <Action.CopyToClipboard title={`Copy ${METRICS[model.metric].title}`} content={String(model.value)} />
+            <Action.CopyToClipboard title="Copy Model Link" content={modelUrl(model.slug)} />
+          </ActionPanel.Section>
+        </>
       ) : null}
-      {model ? (
-        <ActionPanel.Submenu title="Copy" icon={Icon.Clipboard}>
-          <Action.CopyToClipboard
-            title="Model Summary"
-            content={snapshot ? modelSummary(model, snapshot, preferences) : model.name}
-            shortcut={Keyboard.Shortcut.Common.Copy}
-          />
-          <Action.CopyToClipboard title="Model Name" content={model.name} />
-          <Action.CopyToClipboard title={`${METRICS[model.metric].title} Value`} content={String(model.value)} />
-          <Action.CopyToClipboard title="Model Link" content={modelUrl(model.slug)} />
-        </ActionPanel.Submenu>
-      ) : null}
-      <ActionPanel.Submenu title="Open" icon={Icon.Globe}>
-        {model ? <Action.OpenInBrowser title="Model on Artificial Analysis" url={modelUrl(model.slug)} /> : null}
-        <Action.OpenInBrowser title="Intelligence Index Leaderboard" url={LEADERBOARD_URL} />
-        <Action.OpenInBrowser title="Get a Free API Key" url={API_KEY_URL} />
-      </ActionPanel.Submenu>
-      <Action title="Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
+      {controls ? <FilterSection controls={controls} /> : null}
+      <ActionPanel.Section>
+        <Action
+          title="Refresh Rankings"
+          icon={Icon.ArrowClockwise}
+          shortcut={Keyboard.Shortcut.Common.Refresh}
+          onAction={() => data.refresh()}
+        />
+        <LeaderboardsSubmenu />
+        <Action.OpenInBrowser title="Open Intelligence Index Leaderboard" url={LEADERBOARD_URL} />
+        <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
+      </ActionPanel.Section>
     </ActionPanel>
+  );
+}
+
+function FavoriteAction({ data, model }: { data: RankingsData; model: RankedModel }) {
+  const favorite = data.favorites.ids.has(model.id);
+  return (
+    <Action
+      title={favorite ? "Remove from Favorites" : "Add to Favorites"}
+      icon={favorite ? Icon.StarDisabled : Icon.Star}
+      shortcut={Keyboard.Shortcut.Common.Pin}
+      onAction={() => data.favorites.toggle(model.id)}
+    />
+  );
+}
+
+function FilterSection({ controls }: { controls: BrowseControls }) {
+  const filtered = controls.providerId !== ALL_PROVIDERS || controls.favoritesOnly;
+  return (
+    <ActionPanel.Section>
+      <ActionPanel.Submenu
+        title="Filter by Provider"
+        icon={Icon.Filter}
+        shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
+      >
+        <Action
+          title="All Providers"
+          icon={controls.providerId === ALL_PROVIDERS ? Icon.Checkmark : Icon.Circle}
+          onAction={() => controls.setProviderId(ALL_PROVIDERS)}
+        />
+        {controls.creators.map((creator) => (
+          <Action
+            key={creator.id}
+            title={creator.name}
+            icon={controls.providerId === creator.id ? Icon.Checkmark : providerIcon(creator.name)}
+            onAction={() => controls.setProviderId(creator.id)}
+          />
+        ))}
+      </ActionPanel.Submenu>
+      {controls.allowFavorites ? (
+        <Action
+          title={controls.favoritesOnly ? "Show All Models" : "Show Favorites Only"}
+          icon={controls.favoritesOnly ? Icon.StarDisabled : Icon.Star}
+          shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
+          onAction={() => controls.setFavoritesOnly(!controls.favoritesOnly)}
+        />
+      ) : null}
+      {filtered ? (
+        <Action
+          title="Clear Filters"
+          icon={Icon.XMarkCircle}
+          onAction={() => {
+            controls.setProviderId(ALL_PROVIDERS);
+            controls.setFavoritesOnly(false);
+          }}
+        />
+      ) : null}
+    </ActionPanel.Section>
   );
 }
