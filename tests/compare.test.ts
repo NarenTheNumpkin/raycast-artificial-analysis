@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addModelCardSvg, comparisonCardSvg } from "../src/lib/cards";
+import { comparisonCardSvg, modelTileSvg } from "../src/lib/cards";
 import { compareMetric } from "../src/lib/compare";
 import { model } from "./fixtures";
 
@@ -80,8 +80,18 @@ describe("comparison cards", () => {
     expect(unsafe).not.toContain("<b>");
   });
 
-  it("invites another model in an empty column", () => {
-    expect(addModelCardSvg("dark", "tall")).toContain(">Add a Model</text>");
-    expect(addModelCardSvg("light", "portrait")).toContain('stroke-dasharray="10 8"');
+  it("draws wide cards with the name beside the logo for two-model comparisons", () => {
+    const svg = comparisonCardSvg(card("Alpha"), "dark", "wide");
+    expect(svg).toContain('viewBox="0 0 360 270"');
+    expect(svg).toContain('x="72" y="46" font-family');
+    expect(svg).toContain('fill="#f87171">60.0</text>');
+  });
+
+  it("marks search results already in the comparison", () => {
+    const added = modelTileSvg({ name: "Alpha", detail: "Added", logo, added: true }, "dark");
+    const open = modelTileSvg({ name: "Beta <X>", detail: "High", logo, added: false }, "dark");
+    expect(added).toContain("<circle");
+    expect(open).not.toContain("<circle");
+    expect(open).toContain("Beta &lt;X&gt;");
   });
 });

@@ -1,18 +1,29 @@
-import { Action, ActionPanel, Color, environment, Grid, Icon } from "@raycast/api";
-import { useMemo, useState } from "react";
+import { Action, ActionPanel, environment, Grid, Icon } from "@raycast/api";
+import { useMemo, useState, type JSX } from "react";
+import { MAX_COMPARED_MODELS } from "../hooks/use-comparison";
 import { updatedText, useBrowseControls, useNow, useRankingsData } from "../hooks/use-rankings";
-import { browseCardSvg, modelCardSvg } from "../lib/cards";
-import { distinctModelRankings, familyName } from "../lib/families";
+import { leaderboardTileSvg, modelCardSvg, type TileIcon } from "../lib/cards";
+import { distinctModelRankings } from "../lib/families";
 import { ALL_PROVIDERS, browseEntries } from "../lib/filters";
 import { logoSvg, providerIcon, svgImage } from "../lib/images";
 import { METRICS } from "../lib/metrics";
-import { rankModels, type RankedModel } from "../lib/models";
+import { rankModels } from "../lib/models";
 import { CompareModels } from "./compare-models";
-import { LeaderboardList, LEADERBOARDS, type Leaderboard } from "./leaderboards";
+import { LeaderboardList, LEADERBOARDS } from "./leaderboards";
 import { unavailableState, type EmptyState } from "./load-states";
 import { GeneralActions, ModelActions } from "./model-actions";
 import { RankingsList } from "./rankings-list";
 import { Setup } from "./setup";
+
+interface Tile {
+  id: string;
+  icon: TileIcon;
+  label: string;
+  detail: string;
+  tooltip: string;
+  title: string;
+  target: JSX.Element;
+}
 
 export function Dashboard() {
   const data = useRankingsData();
@@ -37,24 +48,61 @@ export function Dashboard() {
       top.map((model) => ({
         model,
         image: svgImage(
-          modelCardSvg(model, environment.appearance, logoSvg(model.creator), {
-            value: METRICS.intelligence.format(model.value),
-            label: METRICS.intelligence.title,
-          }),
+          modelCardSvg(
+            model,
+            environment.appearance,
+            logoSvg(model.creator),
+            { value: METRICS.intelligence.format(model.value), label: METRICS.intelligence.title },
+            data.favorites.ids.has(model.id),
+          ),
         ),
       })),
-    [top],
+    [top, data.favorites.ids],
   );
-  const tiles = useMemo(
-    () =>
-      LEADERBOARDS.map((board) => ({
-        board,
-        subtitle: board.favoritesOnly
-          ? favoritesSubtitle(models.filter((model) => data.favorites.ids.has(model.id)).length)
-          : leaderSubtitle(board, rankModels(models, board.metric)[0]),
-      })),
-    [models, data.favorites.ids],
-  );
+  const comparing = data.comparison.ids.size;
+  const tiles = useMemo((): Tile[] => {
+    const leaderboards = LEADERBOARDS.map((board): Tile => {
+      const base = {
+        id: `leaderboard-${board.tile}`,
+        icon: board.tile,
+        label: board.caption,
+        title: board.title,
+        target: <LeaderboardList board={board} providerId={provider?.id} />,
+      };
+      if (board.favoritesOnly) {
+        const saved = models.filter((model) => data.favorites.ids.has(model.id)).length;
+        return { ...base, detail: saved ? `${saved} saved` : "None yet", tooltip: board.title };
+      }
+      const leader = rankModels(models, board.metric)[0];
+      const value = leader ? METRICS[board.metric].format(leader.value) : undefined;
+      return {
+        ...base,
+        detail: value ? `Best ${value}` : "No data yet",
+        tooltip: leader ? `${board.title}\nLeader: ${leader.name} (${value})` : board.title,
+      };
+    });
+    return [
+      {
+        id: "leaderboard-all",
+        icon: "intelligence",
+        label: "All Models",
+        detail: `${rankModels(models).length} models`,
+        tooltip: "Every model, ranked by Intelligence Index",
+        title: "All AI Models",
+        target: <RankingsList initialProviderId={provider?.id} />,
+      },
+      ...leaderboards,
+      {
+        id: "compare-models",
+        icon: "compare",
+        label: "Compare",
+        detail: comparing ? `${comparing} selected` : `Pick up to ${MAX_COMPARED_MODELS}`,
+        tooltip: "Compare models side by side",
+        title: "Compare Models",
+        target: <CompareModels />,
+      },
+    ];
+  }, [models, data.favorites.ids, comparing, provider?.id]);
   if (data.needsApiKey) return <Setup />;
   const searching = search.trim().length > 0;
   const emptyState: EmptyState = data.snapshot
@@ -67,14 +115,12 @@ export function Dashboard() {
     : unavailableState(data);
   return (
     <Grid
-      columns={3}
-      aspectRatio="16/9"
-      inset={Grid.Inset.Zero}
       navigationTitle="AI Model Rankings"
       searchBarPlaceholder="Search top models or providers…"
       filtering={false}
       searchText={search}
       onSearchTextChange={setSearch}
+      inset={Grid.Inset.Zero}
       isLoading={data.isLoading}
       searchBarAccessory={
         <Grid.Dropdown tooltip="Filter by Provider" value={providerId} onChange={controls.setProviderId}>
@@ -102,6 +148,8 @@ export function Dashboard() {
         <Grid.Section
           title={provider ? `Top ${provider.name} Models` : "Top Models"}
           subtitle={`${METRICS.intelligence.title} · ${updatedText(data, now)}`}
+          columns={5}
+          aspectRatio="3/4"
         >
           {cards.map(({ model, image }) => (
             <Grid.Item
@@ -111,78 +159,31 @@ export function Dashboard() {
                 value: image,
                 tooltip: `#${model.rank} ${model.name}\n${model.creator} · ${METRICS.intelligence.title} ${model.value}`,
               }}
-              title={model.creator}
-              accessory={
-                data.favorites.ids.has(model.id)
-                  ? { icon: { source: Icon.Star, tintColor: Color.Yellow }, tooltip: "Favorite" }
-                  : undefined
-              }
               actions={<ModelActions data={data} model={model} />}
             />
           ))}
-          <Grid.Item
-            id="browse-all"
-            content={svgImage(browseCardSvg(models.length, environment.appearance))}
-            title={provider ? `All ${provider.name} Models` : "All Evaluated Models"}
-            actions={
-              <ActionPanel>
-                <Action.Push
-                  title="Browse All Models"
-                  icon={Icon.List}
-                  target={<RankingsList initialProviderId={provider?.id} />}
-                />
-                <GeneralActions data={data} />
-              </ActionPanel>
-            }
-          />
         </Grid.Section>
       ) : null}
       {data.snapshot && !searching ? (
-        <Grid.Section title="More Leaderboards" columns={6} aspectRatio="16/9" inset={Grid.Inset.Large}>
-          {tiles.map(({ board, subtitle }) => (
+        <Grid.Section title="Leaderboards" columns={7} aspectRatio="1">
+          {tiles.map((tile) => (
             <Grid.Item
-              key={board.title}
-              id={`leaderboard-${board.metric}${board.favoritesOnly ? "-favorites" : ""}`}
-              content={{ value: board.icon, tooltip: `${board.title}${subtitle ? `\n${subtitle}` : ""}` }}
-              title={board.caption}
-              subtitle={subtitle}
+              key={tile.id}
+              id={tile.id}
+              content={{
+                value: svgImage(leaderboardTileSvg(tile, environment.appearance)),
+                tooltip: tile.tooltip,
+              }}
               actions={
-                <ActionPanel>
-                  <Action.Push
-                    title={`Open ${board.title}`}
-                    icon={Icon.List}
-                    target={<LeaderboardList board={board} providerId={provider?.id} />}
-                  />
+                <ActionPanel title={tile.title}>
+                  <Action.Push title={`Open ${tile.title}`} icon={Icon.List} target={tile.target} />
                   <GeneralActions data={data} />
                 </ActionPanel>
               }
             />
           ))}
-          <Grid.Item
-            id="compare-models"
-            content={{
-              value: { source: Icon.BarChart, tintColor: Color.Blue },
-              tooltip: "Compare models side by side",
-            }}
-            title="Compare"
-            subtitle={data.comparison.ids.size ? `${data.comparison.ids.size} selected` : "Pick up to 4"}
-            actions={
-              <ActionPanel>
-                <Action.Push title="Open Comparison" icon={Icon.BarChart} target={<CompareModels />} />
-                <GeneralActions data={data} />
-              </ActionPanel>
-            }
-          />
         </Grid.Section>
       ) : null}
     </Grid>
   );
-}
-
-function leaderSubtitle(board: Leaderboard, leader: RankedModel | undefined): string {
-  return leader ? `${familyName(leader.name)} · ${METRICS[board.metric].format(leader.value)}` : "No data yet";
-}
-
-function favoritesSubtitle(count: number): string {
-  return count ? `${count} saved` : "None yet";
 }

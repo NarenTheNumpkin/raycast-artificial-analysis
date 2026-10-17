@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { browseCardSvg, modelCardSvg, monogramSvg } from "../src/lib/cards";
+import { leaderboardTileSvg, modelCardSvg, monogramSvg } from "../src/lib/cards";
 import { configurationLabel, distinctModelRankings, familyName } from "../src/lib/families";
 import { rankModels } from "../src/lib/models";
 import { providerAsset, providerInitials } from "../src/lib/providers";
@@ -56,12 +56,23 @@ describe("card assets", () => {
     const light = modelCardSvg(entry, "light", logo, score);
     expect(dark).toContain("&lt;script&gt;");
     expect(dark).not.toContain("<script>");
-    expect(dark).toContain('font-size="54"');
+    expect(dark).toContain('font-size="96"');
     expect(dark).toContain(">50.0</text>");
     expect(dark).toContain(">Intelligence &lt;Index&gt;</text>");
     expect(dark).not.toContain('width="1em"');
     expect(light).not.toBe(dark);
-    expect(browseCardSvg(694, "dark")).toContain("All 694 models");
+    expect(dark).not.toContain("#facc15");
+    expect(modelCardSvg(entry, "dark", logo, score, true)).toContain('fill="#facc15"');
+  });
+
+  it("draws leaderboard tiles with a colored icon, label, and detail", () => {
+    const tile = leaderboardTileSvg({ icon: "speed", label: "Speed", detail: "Best <402.7> t/s" }, "dark");
+    expect(tile).toContain('stroke="#fb923c"');
+    expect(tile).toContain(">Speed</text>");
+    expect(tile).toContain("Best &lt;402.7&gt; t/s");
+    expect(leaderboardTileSvg({ icon: "favorites", label: "Favorites", detail: "None yet" }, "light")).toContain(
+      'fill="#ca8a04"',
+    );
   });
 
   it("marks the podium with medal-colored rank pills", () => {
@@ -73,7 +84,7 @@ describe("card assets", () => {
     expect(first).toContain('fill="#fef3c7"');
     expect(second).toContain('fill="#e2e8f0"');
     expect(third).toContain('fill="#ffedd5"');
-    expect(fourth).toContain('rx="15" fill="none" stroke=');
+    expect(fourth).toContain('rx="26" fill="none" stroke=');
     expect(fourth).toContain(">#4</text>");
   });
 

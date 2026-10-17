@@ -2,7 +2,7 @@ import { Action, ActionPanel, Color, environment, Grid, Icon, List, useNavigatio
 import { useMemo, useState } from "react";
 import { MAX_COMPARED_MODELS } from "../hooks/use-comparison";
 import { updatedText, useNow, useRankingsData, type RankingsData } from "../hooks/use-rankings";
-import { addModelCardSvg, comparisonCardSvg, type ComparisonShape } from "../lib/cards";
+import { comparisonCardSvg, modelTileSvg, type ComparisonShape } from "../lib/cards";
 import { compareMetric } from "../lib/compare";
 import { configurationLabel, familyName } from "../lib/families";
 import { modelUrl } from "../lib/format";
@@ -15,19 +15,17 @@ import { ModelDetails } from "./model-details";
 import { Setup } from "./setup";
 
 const ADD_ICON = { source: Icon.PlusCircle, tintColor: Color.Blue };
+const MANAGE = "manage";
 
-/**
- * Three portrait columns until a fourth model joins, then four tall ones. Both fit the Raycast window
- * without scrolling, and the next empty column holds the Add a Model card.
- */
+/** Wide cards for two models, then narrower columns as more join, so the comparison always fills the window. */
 function comparisonLayout(count: number): {
   columns: number;
   shape: ComparisonShape;
-  aspectRatio: "3/4" | "9/16";
+  aspectRatio: "4/3" | "3/4" | "9/16";
 } {
-  return count < 3
-    ? { columns: 3, shape: "portrait", aspectRatio: "3/4" }
-    : { columns: 4, shape: "tall", aspectRatio: "9/16" };
+  if (count <= 2) return { columns: 2, shape: "wide", aspectRatio: "4/3" };
+  if (count === 3) return { columns: 3, shape: "portrait", aspectRatio: "3/4" };
+  return { columns: 4, shape: "tall", aspectRatio: "9/16" };
 }
 
 export function CompareModels() {
@@ -65,8 +63,8 @@ export function CompareModels() {
   }, [models, layout.shape]);
   if (data.needsApiKey) return <Setup />;
   const searching = search.trim().length > 0;
+  const full = models.length >= MAX_COMPARED_MODELS;
   const unavailable = data.snapshot ? undefined : unavailableState(data);
-  const addModel = <ComparisonActions data={data} />;
   return (
     <Grid
       navigationTitle="Compare Models"
@@ -76,6 +74,50 @@ export function CompareModels() {
       onSearchTextChange={setSearch}
       inset={Grid.Inset.Zero}
       isLoading={data.isLoading}
+      searchBarAccessory={
+        data.snapshot ? (
+          // A compact add/remove menu beside the search bar. It always shows "Add or Remove": choosing a model
+          // toggles it, and the key remounts the menu so it returns to that label.
+          <Grid.Dropdown
+            key={[...data.comparison.ids].join(",")}
+            tooltip="Add or Remove Models"
+            value={MANAGE}
+            onChange={(value) => {
+              if (value !== MANAGE) void data.comparison.toggle(value);
+            }}
+          >
+            <Grid.Dropdown.Item title="Add or Remove" value={MANAGE} icon={ADD_ICON} />
+            {models.length ? (
+              <Grid.Dropdown.Section title="Remove">
+                {models.map((model) => (
+                  <Grid.Dropdown.Item
+                    key={model.id}
+                    title={model.name}
+                    value={model.id}
+                    icon={{ source: Icon.MinusCircle, tintColor: Color.Red }}
+                    keywords={[model.creator]}
+                  />
+                ))}
+              </Grid.Dropdown.Section>
+            ) : null}
+            {full ? null : (
+              <Grid.Dropdown.Section title="Add">
+                {ranked
+                  .filter((model) => !data.comparison.ids.has(model.id))
+                  .map((model) => (
+                    <Grid.Dropdown.Item
+                      key={model.id}
+                      title={model.name}
+                      value={model.id}
+                      icon={providerIcon(model.creator)}
+                      keywords={[model.creator]}
+                    />
+                  ))}
+              </Grid.Dropdown.Section>
+            )}
+          </Grid.Dropdown>
+        ) : undefined
+      }
     >
       <Grid.EmptyView
         title={unavailable?.title ?? (searching ? "No Matching Models" : "No Models to Compare")}
@@ -83,18 +125,17 @@ export function CompareModels() {
           unavailable?.description ??
           (searching
             ? "Try another model or provider name."
-            : `Type a model name above, or press ↵ to choose up to ${MAX_COMPARED_MODELS} models.`)
+            : `Type a model name, or use Add or Remove at the top right. Compare up to ${MAX_COMPARED_MODELS}.`)
         }
         icon={unavailable?.icon ?? (searching ? Icon.MagnifyingGlass : Icon.BarChart)}
-        actions={unavailable?.actions ?? addModel}
+        actions={unavailable?.actions ?? <ComparisonActions data={data} />}
       />
       {data.snapshot && searching ? (
         <Grid.Section
-          title="Add to Comparison"
+          title={full ? "Comparison Is Full" : "Add to Comparison"}
           subtitle={`${models.length} of ${MAX_COMPARED_MODELS} selected`}
           columns={6}
           aspectRatio="1"
-          inset={Grid.Inset.Large}
         >
           {matches.map((model) => {
             const added = data.comparison.ids.has(model.id);
@@ -102,9 +143,20 @@ export function CompareModels() {
               <Grid.Item
                 key={model.id}
                 id={model.id}
-                content={{ value: providerIcon(model.creator), tooltip: model.name }}
-                title={familyName(model.name)}
-                subtitle={added ? "✓ Added" : configurationLabel(model.name) || model.creator}
+                content={{
+                  value: svgImage(
+                    modelTileSvg(
+                      {
+                        name: familyName(model.name),
+                        detail: added ? "Added" : configurationLabel(model.name) || model.creator,
+                        logo: logoSvg(model.creator),
+                        added,
+                      },
+                      environment.appearance,
+                    ),
+                  ),
+                  tooltip: model.name,
+                }}
                 actions={
                   <ActionPanel title={model.name}>
                     <Action
@@ -137,16 +189,6 @@ export function CompareModels() {
               actions={<ComparisonActions data={data} model={model} />}
             />
           ))}
-          {models.length < MAX_COMPARED_MODELS ? (
-            <Grid.Item
-              id="add-model"
-              content={{
-                value: svgImage(addModelCardSvg(environment.appearance, layout.shape)),
-                tooltip: "Add a model",
-              }}
-              actions={addModel}
-            />
-          ) : null}
         </Grid.Section>
       ) : null}
     </Grid>

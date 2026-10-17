@@ -31,7 +31,7 @@ The preferences also let you choose which statistics appear in model details.
 
 ## Comparing Models
 
-Open **Compare Models**, or the **Compare** tile on the dashboard. Each model gets its own column with every metric in large type: green marks the best value and red the worst. To add a model, type its name in the search bar or choose the **Add a Model** card. Up to four models fit side by side.
+Open **Compare Models**, or the **Compare** tile on the dashboard. Each model gets its own card with every metric in large type: green marks the best value and red the worst. Two models get large cards; with three or four, the columns narrow so everything stays in view. Add or remove models from the small **Add or Remove** menu beside the search bar, or type a model name to add it.
 
 ## Commands
 
