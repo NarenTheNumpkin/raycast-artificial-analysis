@@ -1,5 +1,6 @@
 import { Action, ActionPanel, Color, Icon, type Image } from "@raycast/api";
 import type { MetricKey } from "../lib/metrics";
+import { CompareModels } from "./compare-models";
 import { Dashboard } from "./dashboard";
 import { RankingsList } from "./rankings-list";
 
@@ -82,6 +83,11 @@ export function LeaderboardsSubmenu() {
           target={<LeaderboardList board={board} />}
         />
       ))}
+      <Action.Push
+        title="Compare Models"
+        icon={{ source: Icon.BarChart, tintColor: Color.Blue }}
+        target={<CompareModels />}
+      />
     </ActionPanel.Submenu>
   );
 }

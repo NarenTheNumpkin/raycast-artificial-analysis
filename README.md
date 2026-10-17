@@ -19,6 +19,7 @@
 - **Top models at a glance:** the five strongest model families on the Intelligence Index.
 - **Six leaderboards:** intelligence, coding, output speed, latency, input price, and output price.
 - **Model details:** every metric for a model, with its rank against all others.
+- **Side-by-side comparison:** compare up to four models, with better values in green and worse in red.
 - **Favorites and filters:** star models, filter by provider, and search by name.
 
 ## Setup
@@ -38,6 +39,7 @@ The preferences also let you choose which statistics appear in model details.
 | Fastest AI Models     | Models ranked by output tokens per second                |
 | Lowest Latency Models | Models ranked by time to first token                     |
 | Model Pricing         | Models ranked by input or output price per 1M tokens     |
+| Compare Models        | Up to four models side by side, best and worst marked    |
 
 ## Keyboard Shortcuts
 
@@ -48,6 +50,8 @@ The preferences also let you choose which statistics appear in model details.
 | `⌘ P`    | Switch the ranking metric, or the dashboard filter |
 | `⌘ D`    | Show or hide the details panel                     |
 | `⌘ .`    | Add or remove a favorite                           |
+| `⌘ ⇧ A`  | Add or remove a model from the comparison          |
+| `⌘ ⇧ V`  | Open the comparison                                |
 | `⌘ ⇧ F`  | Show favorites only                                |
 | `⌘ ⇧ P`  | Filter by provider                                 |
 | `⌘ ⇧ C`  | Copy a model summary                               |

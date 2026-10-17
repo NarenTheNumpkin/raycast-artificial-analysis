@@ -3,12 +3,18 @@ import { useEffect, useMemo, useState } from "react";
 import { ALL_PROVIDERS, providers } from "../lib/filters";
 import { formatAge } from "../lib/format";
 import type { LeaderboardSnapshot } from "../lib/models";
+import { useComparison } from "./use-comparison";
 import { useFavorites } from "./use-favorites";
 import { describeLoadError, useLeaderboard } from "./use-leaderboard";
 
 export function useRankingsData() {
   const preferences = getPreferenceValues<Preferences>();
-  return { ...useLeaderboard(preferences.apiKey), preferences, favorites: useFavorites() };
+  return {
+    ...useLeaderboard(preferences.apiKey),
+    preferences,
+    favorites: useFavorites(),
+    comparison: useComparison(),
+  };
 }
 
 export type RankingsData = ReturnType<typeof useRankingsData>;

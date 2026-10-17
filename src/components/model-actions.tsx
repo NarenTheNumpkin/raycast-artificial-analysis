@@ -6,6 +6,7 @@ import { modelSummary, modelUrl } from "../lib/format";
 import { providerIcon } from "../lib/images";
 import { METRICS } from "../lib/metrics";
 import type { RankedModel } from "../lib/models";
+import { CompareModels } from "./compare-models";
 import { LeaderboardsSubmenu } from "./leaderboards";
 import { ModelDetails } from "./model-details";
 
@@ -37,6 +38,20 @@ export function ModelActions({ data, model, controls, showDetails = true, panel 
             ) : null}
             <Action.OpenInBrowser title="Open on Artificial Analysis" url={modelUrl(model.slug)} />
             <FavoriteAction data={data} model={model} />
+            <Action
+              title={data.comparison.ids.has(model.id) ? "Remove from Comparison" : "Add to Comparison"}
+              icon={data.comparison.ids.has(model.id) ? Icon.MinusCircle : Icon.PlusCircle}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "a" }}
+              onAction={() => data.comparison.toggle(model.id)}
+            />
+            {data.comparison.ids.size ? (
+              <Action.Push
+                title={`Open Comparison (${data.comparison.ids.size})`}
+                icon={Icon.BarChart}
+                shortcut={{ modifiers: ["cmd", "shift"], key: "v" }}
+                target={<CompareModels />}
+              />
+            ) : null}
             {panel ? (
               <Action
                 title={panel.visible ? "Hide Details Panel" : "Show Details Panel"}

@@ -87,6 +87,18 @@
         "response",
         "ttft"
       ]
+    },
+    {
+      "name": "compare-models",
+      "title": "Compare Models",
+      "description": "Compare up to four AI models side by side, with the better values highlighted.",
+      "mode": "view",
+      "keywords": [
+        "compare",
+        "versus",
+        "vs",
+        "side by side"
+      ]
     }
   ],
   "preferences": [
