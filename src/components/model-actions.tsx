@@ -63,19 +63,26 @@ export function ModelActions({ data, model, controls, showDetails = true, panel 
         </>
       ) : null}
       {filtersFirst ? filters : null}
-      <ActionPanel.Section>
-        <Action
-          title="Refresh Rankings"
-          icon={Icon.ArrowClockwise}
-          shortcut={Keyboard.Shortcut.Common.Refresh}
-          onAction={() => data.refresh()}
-        />
-        <LeaderboardsSubmenu />
-        <Action.OpenInBrowser title="Open Intelligence Index Leaderboard" url={LEADERBOARD_URL} />
-        <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
-      </ActionPanel.Section>
+      <GeneralActions data={data} />
       {filtersFirst ? null : filters}
     </ActionPanel>
+  );
+}
+
+/** Refresh, navigation, and settings actions shared by every view. */
+export function GeneralActions({ data }: { data: RankingsData }) {
+  return (
+    <ActionPanel.Section>
+      <Action
+        title="Refresh Rankings"
+        icon={Icon.ArrowClockwise}
+        shortcut={Keyboard.Shortcut.Common.Refresh}
+        onAction={() => data.refresh()}
+      />
+      <LeaderboardsSubmenu />
+      <Action.OpenInBrowser title="Open Intelligence Index Leaderboard" url={LEADERBOARD_URL} />
+      <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
+    </ActionPanel.Section>
   );
 }
 
@@ -104,14 +111,12 @@ function FilterSection({ controls }: { controls: BrowseControls }) {
           }}
         />
       ) : null}
-      {controls.allowFavorites ? (
-        <Action
-          title={controls.favoritesOnly ? "Show All Models" : "Show Favorites Only"}
-          icon={controls.favoritesOnly ? Icon.StarDisabled : Icon.Star}
-          shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
-          onAction={() => controls.setFavoritesOnly(!controls.favoritesOnly)}
-        />
-      ) : null}
+      <Action
+        title={controls.favoritesOnly ? "Show All Models" : "Show Favorites Only"}
+        icon={controls.favoritesOnly ? Icon.StarDisabled : Icon.Star}
+        shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
+        onAction={() => controls.setFavoritesOnly(!controls.favoritesOnly)}
+      />
       <ActionPanel.Submenu
         title="Filter by Provider"
         icon={Icon.Filter}

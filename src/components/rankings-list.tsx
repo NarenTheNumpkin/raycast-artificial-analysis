@@ -16,7 +16,7 @@ import { providerIcon } from "../lib/images";
 import { isPriceMetric, METRIC_GROUPS, METRICS, type MetricKey } from "../lib/metrics";
 import { rankModels } from "../lib/models";
 import { buildStandings } from "../lib/standings";
-import { METRIC_ICONS } from "./leaderboards";
+import { metricIcon } from "./leaderboards";
 import { ModelActions } from "./model-actions";
 import { ModelDetailPanel } from "./model-details";
 import { Setup } from "./setup";
@@ -27,10 +27,12 @@ export function RankingsList({
   initialMetric = "intelligence",
   pricing = false,
   initialFavoritesOnly = false,
+  initialProviderId,
 }: {
   initialMetric?: MetricKey;
   pricing?: boolean;
   initialFavoritesOnly?: boolean;
+  initialProviderId?: string;
 }) {
   const data = useRankingsData();
   const now = useNow();
@@ -38,7 +40,10 @@ export function RankingsList({
   const [metric, setMetric] = useState(initialMetric);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showingPanel, setShowingPanel] = useCachedFlag("show-details-panel", false);
-  const controls = useBrowseControls(data.snapshot, initialFavoritesOnly);
+  const controls = useBrowseControls(data.snapshot, {
+    providerId: initialProviderId,
+    favoritesOnly: initialFavoritesOnly,
+  });
   const ranked = useMemo(() => rankModels(data.snapshot?.models ?? [], metric), [data.snapshot, metric]);
   const standings = useMemo(() => buildStandings(data.snapshot?.models ?? []), [data.snapshot]);
   const rows = useMemo(
@@ -69,12 +74,12 @@ export function RankingsList({
         <List.Dropdown tooltip="Rank By" value={metric} onChange={(value) => setMetric(value as MetricKey)}>
           {pricing
             ? PRICE_METRICS.map((key) => (
-                <List.Dropdown.Item key={key} title={METRICS[key].title} value={key} icon={METRIC_ICONS[key]} />
+                <List.Dropdown.Item key={key} title={METRICS[key].title} value={key} icon={metricIcon(key)} />
               ))
             : METRIC_GROUPS.map((group) => (
                 <List.Dropdown.Section key={group.title} title={group.title}>
                   {group.metrics.map((key) => (
-                    <List.Dropdown.Item key={key} title={METRICS[key].title} value={key} icon={METRIC_ICONS[key]} />
+                    <List.Dropdown.Item key={key} title={METRICS[key].title} value={key} icon={metricIcon(key)} />
                   ))}
                 </List.Dropdown.Section>
               ))}

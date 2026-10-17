@@ -1,12 +1,14 @@
 import { Action, ActionPanel, environment, Grid, Icon } from "@raycast/api";
 import { useMemo, useState } from "react";
-import { failureMessage, useBrowseControls, useNow, useRankingsData } from "../hooks/use-rankings";
+import { failureMessage, updatedText, useBrowseControls, useNow, useRankingsData } from "../hooks/use-rankings";
 import { browseCardSvg, modelCardSvg } from "../lib/cards";
-import { distinctModelRankings } from "../lib/families";
+import { distinctModelRankings, familyName } from "../lib/families";
 import { ALL_PROVIDERS, browseEntries } from "../lib/filters";
-import { formatAge } from "../lib/format";
-import { logoSvg, svgImage } from "../lib/images";
-import { ModelActions } from "./model-actions";
+import { logoSvg, providerIcon, svgImage } from "../lib/images";
+import { METRICS } from "../lib/metrics";
+import { rankModels, type RankedModel } from "../lib/models";
+import { LeaderboardList, LEADERBOARDS, type Leaderboard } from "./leaderboards";
+import { GeneralActions, ModelActions } from "./model-actions";
 import { RankingsList } from "./rankings-list";
 import { Setup } from "./setup";
 
@@ -14,50 +16,95 @@ export function Dashboard() {
   const data = useRankingsData();
   const now = useNow();
   const [search, setSearch] = useState("");
-  const controls = useBrowseControls(data.snapshot, false, false);
+  const controls = useBrowseControls(data.snapshot);
+  const { providerId } = controls;
+  const provider = controls.creators.find((creator) => creator.id === providerId);
+  // Rank across every provider first, so filtered cards keep their global ranks.
   const families = useMemo(() => distinctModelRankings(data.snapshot?.models ?? []), [data.snapshot]);
-  const visible = useMemo(
+  const top = useMemo(
+    () => browseEntries(families, search, { providerId, favoritesOnly: false }, data.favorites.ids).slice(0, 5),
+    [families, search, providerId, data.favorites.ids],
+  );
+  const models = useMemo(
     () =>
-      browseEntries(
-        families,
-        search,
-        { providerId: controls.providerId, favoritesOnly: false },
-        data.favorites.ids,
-      ).slice(0, 5),
-    [families, search, controls.providerId, controls.favoritesOnly, data.favorites.ids],
+      (data.snapshot?.models ?? []).filter((model) => providerId === ALL_PROVIDERS || model.creatorId === providerId),
+    [data.snapshot, providerId],
   );
   const cards = useMemo(
     () =>
-      visible.map((model) => ({
+      top.map((model) => ({
         model,
-        image: svgImage(modelCardSvg(model, environment.appearance, logoSvg(model.creator))),
+        image: svgImage(
+          modelCardSvg(model, environment.appearance, logoSvg(model.creator), {
+            value: METRICS.intelligence.format(model.value),
+            label: METRICS.intelligence.title,
+          }),
+        ),
       })),
-    [visible],
+    [top],
+  );
+  const tiles = useMemo(
+    () =>
+      LEADERBOARDS.map((board) => ({
+        board,
+        subtitle: board.favoritesOnly
+          ? favoritesSubtitle(models.filter((model) => data.favorites.ids.has(model.id)).length)
+          : leaderSubtitle(board, rankModels(models, board.metric)[0]),
+      })),
+    [models, data.favorites.ids],
   );
   if (data.needsApiKey) return <Setup />;
   const error = failureMessage(data);
+  const searching = search.trim().length > 0;
   return (
     <Grid
       columns={3}
       aspectRatio="16/9"
       inset={Grid.Inset.Zero}
       navigationTitle="AI Model Rankings"
-      searchBarPlaceholder="Find a model or provider…"
+      searchBarPlaceholder="Search top models or providers…"
       filtering={false}
       searchText={search}
       onSearchTextChange={setSearch}
       isLoading={data.isLoading}
+      searchBarAccessory={
+        <Grid.Dropdown tooltip="Filter by Provider" value={providerId} onChange={controls.setProviderId}>
+          <Grid.Dropdown.Item title="All Providers" value={ALL_PROVIDERS} icon={Icon.Globe} />
+          <Grid.Dropdown.Section title="Providers">
+            {controls.creators.map((creator) => (
+              <Grid.Dropdown.Item
+                key={creator.id}
+                title={creator.name}
+                value={creator.id}
+                icon={providerIcon(creator.name)}
+              />
+            ))}
+          </Grid.Dropdown.Section>
+        </Grid.Dropdown>
+      }
     >
       <Grid.EmptyView
-        title={error ? "Unable to Load Rankings" : data.isLoading ? "Loading Models…" : "No Matching Models"}
-        description={error ?? "Try a different model name or provider."}
-        icon={error ? Icon.ExclamationMark : Icon.MagnifyingGlass}
-        actions={<ModelActions data={data} controls={controls} />}
+        title={
+          error && !data.snapshot
+            ? "Couldn’t Load Rankings"
+            : data.snapshot
+              ? "No Matching Models"
+              : "Loading Rankings…"
+        }
+        description={
+          error && !data.snapshot
+            ? error
+            : data.snapshot
+              ? "Try another model or provider name."
+              : "Fetching the latest data from Artificial Analysis."
+        }
+        icon={error && !data.snapshot ? Icon.Warning : data.snapshot ? Icon.MagnifyingGlass : Icon.Hourglass}
+        actions={<ModelActions data={data} />}
       />
-      {data.snapshot ? (
+      {data.snapshot && cards.length ? (
         <Grid.Section
-          title={`Top Five · ${controls.providerId === ALL_PROVIDERS ? "Intelligence" : (controls.creators.find((creator) => creator.id === controls.providerId)?.name ?? "Provider")}`}
-          subtitle={`Artificial Analysis · ${error ? "Cached · refresh failed" : formatAge(data.snapshot.fetchedAt, now)}`}
+          title={provider ? `Top ${provider.name} Models` : "Top Models"}
+          subtitle={`${METRICS.intelligence.title} · ${updatedText(data, now)}`}
         >
           {cards.map(({ model, image }) => (
             <Grid.Item
@@ -65,26 +112,60 @@ export function Dashboard() {
               id={model.id}
               content={{
                 value: image,
-                tooltip: `#${model.rank} ${model.name}\n${model.creator} · Intelligence Index ${model.value}`,
+                tooltip: `#${model.rank} ${model.name}\n${model.creator} · ${METRICS.intelligence.title} ${model.value}`,
               }}
               title={model.creator}
-              actions={<ModelActions data={data} model={model} controls={controls} />}
+              actions={<ModelActions data={data} model={model} />}
             />
           ))}
-          {visible.length ? (
+          <Grid.Item
+            id="browse-all"
+            content={svgImage(browseCardSvg(models.length, environment.appearance))}
+            title={provider ? `All ${provider.name} Models` : "All Evaluated Models"}
+            actions={
+              <ActionPanel>
+                <Action.Push
+                  title="Browse All Models"
+                  icon={Icon.List}
+                  target={<RankingsList initialProviderId={provider?.id} />}
+                />
+                <GeneralActions data={data} />
+              </ActionPanel>
+            }
+          />
+        </Grid.Section>
+      ) : null}
+      {data.snapshot && !searching ? (
+        <Grid.Section title="More Leaderboards" columns={5} aspectRatio="16/9" inset={Grid.Inset.Large}>
+          {tiles.map(({ board, subtitle }) => (
             <Grid.Item
-              id="browse-all"
-              content={svgImage(browseCardSvg(data.snapshot.models.length, environment.appearance))}
-              title="All Evaluated Models"
+              key={board.title}
+              id={`leaderboard-${board.metric}${board.favoritesOnly ? "-favorites" : ""}`}
+              content={{ value: board.icon, tooltip: `${board.title}${subtitle ? `\n${subtitle}` : ""}` }}
+              title={board.caption}
+              subtitle={subtitle}
               actions={
                 <ActionPanel>
-                  <Action.Push title="Browse All Models" icon={Icon.List} target={<RankingsList />} />
+                  <Action.Push
+                    title={`Open ${board.title}`}
+                    icon={Icon.List}
+                    target={<LeaderboardList board={board} providerId={provider?.id} />}
+                  />
+                  <GeneralActions data={data} />
                 </ActionPanel>
               }
             />
-          ) : null}
+          ))}
         </Grid.Section>
       ) : null}
     </Grid>
   );
+}
+
+function leaderSubtitle(board: Leaderboard, leader: RankedModel | undefined): string {
+  return leader ? `${familyName(leader.name)} · ${METRICS[board.metric].format(leader.value)}` : "No data yet";
+}
+
+function favoritesSubtitle(count: number): string {
+  return count ? `${count} saved` : "None yet";
 }

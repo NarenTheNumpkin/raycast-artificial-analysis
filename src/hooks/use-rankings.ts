@@ -15,13 +15,12 @@ export type RankingsData = ReturnType<typeof useRankingsData>;
 
 export function useBrowseControls(
   snapshot: LeaderboardSnapshot | undefined,
-  initialFavoritesOnly = false,
-  allowFavorites = true,
+  initial: { providerId?: string; favoritesOnly?: boolean } = {},
 ) {
-  const [providerId, setProviderId] = useState(ALL_PROVIDERS);
-  const [favoritesOnly, setFavoritesOnly] = useState(initialFavoritesOnly);
+  const [providerId, setProviderId] = useState(initial.providerId ?? ALL_PROVIDERS);
+  const [favoritesOnly, setFavoritesOnly] = useState(initial.favoritesOnly ?? false);
   const creators = useMemo(() => providers(snapshot?.models ?? []), [snapshot]);
-  return { providerId, setProviderId, favoritesOnly, setFavoritesOnly, creators, allowFavorites };
+  return { providerId, setProviderId, favoritesOnly, setFavoritesOnly, creators };
 }
 
 export type BrowseControls = ReturnType<typeof useBrowseControls>;

@@ -51,14 +51,30 @@ describe("card assets", () => {
     const entry = rankModels([model({ name: 'Example <script> & "Lab" (High)' })])[0];
     const logo =
       '<svg width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M1 1h20v20H1z"/></svg>';
-    const dark = modelCardSvg(entry, "dark", logo);
-    const light = modelCardSvg(entry, "light", logo);
+    const score = { value: "50.0", label: "Intelligence <Index>" };
+    const dark = modelCardSvg(entry, "dark", logo, score);
+    const light = modelCardSvg(entry, "light", logo, score);
     expect(dark).toContain("&lt;script&gt;");
     expect(dark).not.toContain("<script>");
-    expect(dark).toContain('font-size="66"');
+    expect(dark).toContain('font-size="54"');
+    expect(dark).toContain(">50.0</text>");
+    expect(dark).toContain(">Intelligence &lt;Index&gt;</text>");
     expect(dark).not.toContain('width="1em"');
     expect(light).not.toBe(dark);
-    expect(browseCardSvg(694, "dark")).toContain("694 evaluated entries");
+    expect(browseCardSvg(694, "dark")).toContain("All 694 models");
+  });
+
+  it("marks the podium with medal-colored rank pills", () => {
+    const logo = '<svg viewBox="0 0 24 24"></svg>';
+    const score = { value: "1", label: "Score" };
+    const [first, second, third, fourth] = rankModels(
+      [90, 80, 70, 60].map((intelligence, index) => model({ id: `m${index}`, intelligence })),
+    ).map((entry) => modelCardSvg(entry, "light", logo, score));
+    expect(first).toContain('fill="#fef3c7"');
+    expect(second).toContain('fill="#e2e8f0"');
+    expect(third).toContain('fill="#ffedd5"');
+    expect(fourth).toContain('rx="15" fill="none" stroke=');
+    expect(fourth).toContain(">#4</text>");
   });
 
   it.each([

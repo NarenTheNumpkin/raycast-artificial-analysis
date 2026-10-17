@@ -1,9 +1,9 @@
-import { Action, ActionPanel, Icon } from "@raycast/api";
+import { Action, ActionPanel, Color, Icon, type Image } from "@raycast/api";
 import type { MetricKey } from "../lib/metrics";
 import { Dashboard } from "./dashboard";
 import { RankingsList } from "./rankings-list";
 
-export const METRIC_ICONS: Record<MetricKey, Icon> = {
+const METRIC_ICONS: Record<MetricKey, Icon> = {
   intelligence: Icon.LightBulb,
   coding: Icon.Code,
   speed: Icon.Bolt,
@@ -12,32 +12,76 @@ export const METRIC_ICONS: Record<MetricKey, Icon> = {
   latency: Icon.Stopwatch,
 };
 
+const METRIC_COLORS: Record<MetricKey, Color> = {
+  intelligence: Color.Blue,
+  coding: Color.Purple,
+  speed: Color.Orange,
+  inputPrice: Color.Green,
+  outputPrice: Color.Green,
+  latency: Color.Magenta,
+};
+
+/** The metric's icon, tinted with the color used for it throughout the extension. */
+export function metricIcon(metric: MetricKey): Image.ImageLike {
+  return { source: METRIC_ICONS[metric], tintColor: METRIC_COLORS[metric] };
+}
+
+export interface Leaderboard {
+  /** Name in menus, matching the command title. */
+  title: string;
+  /** Short caption for dashboard tiles. */
+  caption: string;
+  icon: Image.ImageLike;
+  metric: MetricKey;
+  pricing?: boolean;
+  favoritesOnly?: boolean;
+}
+
+/** Leaderboards beyond the Intelligence Index, in the order the dashboard shows them. */
+export const LEADERBOARDS: Leaderboard[] = [
+  { title: "Best Coding Models", caption: "Best Coding", icon: metricIcon("coding"), metric: "coding" },
+  { title: "Fastest AI Models", caption: "Fastest", icon: metricIcon("speed"), metric: "speed" },
+  { title: "Lowest Latency Models", caption: "Lowest Latency", icon: metricIcon("latency"), metric: "latency" },
+  {
+    title: "Model Pricing",
+    caption: "Lowest Price",
+    icon: metricIcon("inputPrice"),
+    metric: "inputPrice",
+    pricing: true,
+  },
+  {
+    title: "Favorites",
+    caption: "Favorites",
+    icon: { source: Icon.Star, tintColor: Color.Yellow },
+    metric: "intelligence",
+    favoritesOnly: true,
+  },
+];
+
+export function LeaderboardList({ board, providerId }: { board: Leaderboard; providerId?: string }) {
+  return (
+    <RankingsList
+      initialMetric={board.metric}
+      pricing={board.pricing}
+      initialFavoritesOnly={board.favoritesOnly}
+      initialProviderId={providerId}
+    />
+  );
+}
+
 export function LeaderboardsSubmenu() {
   return (
     <ActionPanel.Submenu title="Browse Leaderboards" icon={Icon.Leaderboard}>
-      <Action.Push title="Top Five Models" icon={Icon.Trophy} target={<Dashboard />} />
-      <Action.Push title="All AI Models" icon={METRIC_ICONS.intelligence} target={<RankingsList />} />
-      <Action.Push title="Favorites" icon={Icon.Star} target={<RankingsList initialFavoritesOnly />} />
-      <Action.Push
-        title="Best Coding Models"
-        icon={METRIC_ICONS.coding}
-        target={<RankingsList initialMetric="coding" />}
-      />
-      <Action.Push
-        title="Fastest AI Models"
-        icon={METRIC_ICONS.speed}
-        target={<RankingsList initialMetric="speed" />}
-      />
-      <Action.Push
-        title="Model Pricing"
-        icon={METRIC_ICONS.inputPrice}
-        target={<RankingsList initialMetric="inputPrice" pricing />}
-      />
-      <Action.Push
-        title="Lowest Latency Models"
-        icon={METRIC_ICONS.latency}
-        target={<RankingsList initialMetric="latency" />}
-      />
+      <Action.Push title="Top Models" icon={{ source: Icon.Trophy, tintColor: Color.Yellow }} target={<Dashboard />} />
+      <Action.Push title="All AI Models" icon={metricIcon("intelligence")} target={<RankingsList />} />
+      {LEADERBOARDS.map((board) => (
+        <Action.Push
+          key={board.title}
+          title={board.title}
+          icon={board.icon}
+          target={<LeaderboardList board={board} />}
+        />
+      ))}
     </ActionPanel.Submenu>
   );
 }
