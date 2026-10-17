@@ -1,1 +1,1 @@
-export { Dashboard as default } from "./components/rankings";
+export { Dashboard as default } from "./components/dashboard";
