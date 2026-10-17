@@ -22,6 +22,28 @@
 - **Side-by-side comparison:** up to four models in columns, with better values in green and worse in red.
 - **Favorites and filters:** star models, filter by provider, and search by name.
 
+## Screenshots
+
+**Top models:** the five strongest model families, with a link to every ranking.
+
+![The AI Model Rankings dashboard showing the top five models](media/top_5.jpg)
+
+**Full ranking:** every model ranked by Intelligence Index, with its configuration beside the name.
+
+![The All AI Models leaderboard](media/all_models.jpg)
+
+**Other leaderboards:** switch the metric with `⌘ P`, here ranking models by output speed.
+
+![The Fastest AI Models leaderboard](media/tokens_per_sec.jpg)
+
+**Model details:** every metric for a model, with its rank against all others.
+
+![Details for a single model](media/model_details.jpg)
+
+**Compare models:** up to four models side by side, with better values in green and worse in red.
+
+![Three models compared side by side](media/compare.jpg)
+
 ## Setup
 
 1. Create a free API key at [Artificial Analysis](https://artificialanalysis.ai/api-key-management-redirect).
