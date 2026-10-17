@@ -7,9 +7,16 @@ export interface MetricDefinition {
   unit: string;
   nonnegative: boolean;
   format: (value: number | null) => string;
+  /** A short label that carries the unit, for compact layouts such as comparison cards. */
+  label: string;
+  /** The value without its unit, to pair with {@link MetricDefinition.label}. */
+  formatBare: (value: number | null) => string;
 }
 
 const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+const seconds = new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 });
+const bare = (formatter: Intl.NumberFormat) => (value: number | null) =>
+  value === null ? "—" : formatter.format(value);
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -48,6 +55,8 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     unit: "Index score",
     nonnegative: false,
     format: formatScore,
+    label: "Intelligence",
+    formatBare: formatScore,
   },
   coding: {
     title: "Coding Index",
@@ -56,6 +65,8 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     unit: "Index score",
     nonnegative: false,
     format: formatScore,
+    label: "Coding",
+    formatBare: formatScore,
   },
   speed: {
     title: "Output Speed",
@@ -64,6 +75,8 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     unit: "Tokens per second",
     nonnegative: true,
     format: (v) => (v === null ? "—" : `${number.format(v)} t/s`),
+    label: "Speed (tok/s)",
+    formatBare: bare(number),
   },
   inputPrice: {
     title: "Input Price",
@@ -72,6 +85,8 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     unit: "USD per million input tokens",
     nonnegative: true,
     format: formatPrice,
+    label: "Input (per 1M)",
+    formatBare: formatPrice,
   },
   outputPrice: {
     title: "Output Price",
@@ -80,6 +95,8 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     unit: "USD per million output tokens",
     nonnegative: true,
     format: formatPrice,
+    label: "Output (per 1M)",
+    formatBare: formatPrice,
   },
   latency: {
     title: "Time to First Token",
@@ -87,6 +104,8 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     direction: "ascending",
     unit: "Seconds",
     nonnegative: true,
-    format: (v) => (v === null ? "—" : `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(v)} s`),
+    format: (v) => (v === null ? "—" : `${seconds.format(v)} s`),
+    label: "Latency (s)",
+    formatBare: bare(seconds),
   },
 };

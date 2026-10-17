@@ -19,7 +19,7 @@
 - **Top models at a glance:** the five strongest model families on the Intelligence Index.
 - **Six leaderboards:** intelligence, coding, output speed, latency, input price, and output price.
 - **Model details:** every metric for a model, with its rank against all others.
-- **Side-by-side comparison:** compare up to four models, with better values in green and worse in red.
+- **Side-by-side comparison:** up to four models in columns, with better values in green and worse in red.
 - **Favorites and filters:** star models, filter by provider, and search by name.
 
 ## Setup
@@ -31,7 +31,7 @@ The preferences also let you choose which statistics appear in model details.
 
 ## Comparing Models
 
-Open **Compare Models**, or the **Compare** tile on the dashboard, and choose **Add a Model** to pick up to four models. Each metric shows every model side by side, with the best value in green and the worst in red. You can also choose **Add to Comparison** from any model's actions (`⌘ K`).
+Open **Compare Models**, or the **Compare** tile on the dashboard. Each model gets its own column with every metric in large type: green marks the best value and red the worst. To add a model, type its name in the search bar or choose the **Add a Model** card. Up to four models fit side by side.
 
 ## Commands
 

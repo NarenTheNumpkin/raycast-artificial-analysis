@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { addModelCardSvg, comparisonCardSvg } from "../src/lib/cards";
 import { compareMetric } from "../src/lib/compare";
 import { model } from "./fixtures";
 
@@ -35,5 +36,52 @@ describe("model comparison", () => {
     ]);
     expect(verdicts([model({ latency: -1 }), model({ latency: 1 })], "latency")).toEqual(["missing", "neutral"]);
     expect(compareMetric([model({ latency: 1 })], "latency")[0]).toMatchObject({ value: 1, verdict: "neutral" });
+  });
+});
+
+describe("comparison cards", () => {
+  const logo = '<svg width="1em" height="1em" viewBox="0 0 24 24"><path d="M1 1h20v20H1z"/></svg>';
+  const card = (name: string) => ({
+    name,
+    configuration: "Example Lab · High",
+    logo,
+    values: [
+      { label: "Intelligence", value: "74.6", verdict: "best" as const },
+      { label: "Coding", value: "60.0", verdict: "worst" as const },
+      { label: "Speed (tok/s)", value: "—", verdict: "missing" as const },
+      { label: "Latency (s)", value: "2.1", verdict: "neutral" as const },
+    ],
+  });
+
+  it("draws portrait cards with stacked tiles colored by verdict", () => {
+    const svg = comparisonCardSvg(card("Alpha"), "light", "portrait");
+    expect(svg).toContain('viewBox="0 0 360 480"');
+    expect(svg).toContain('fill="#dcfce7"');
+    expect(svg).toContain('fill="#fee2e2"');
+    expect(svg).toContain(">74.6</text>");
+    expect(svg).not.toContain('text-anchor="end"');
+    expect(svg).not.toContain('width="1em"');
+  });
+
+  it("draws tall cards with inline, right-aligned values", () => {
+    const svg = comparisonCardSvg(card("Alpha"), "dark", "tall");
+    expect(svg).toContain('viewBox="0 0 360 640"');
+    expect(svg).toContain('text-anchor="end"');
+    expect(svg).toContain('fill="#4ade80">74.6</text>');
+  });
+
+  it("anchors names to the bottom of the header and escapes API text", () => {
+    const short = comparisonCardSvg(card("Alpha"), "dark", "portrait");
+    const long = comparisonCardSvg(card("Gemini 3.5 Flash-Lite"), "dark", "portrait");
+    const unsafe = comparisonCardSvg(card("A <b> & Co"), "dark", "portrait");
+    expect(short).toContain('y="132" font-family');
+    expect(long).toContain('y="100" font-family');
+    expect(unsafe).toContain("A &lt;b&gt; &amp; Co");
+    expect(unsafe).not.toContain("<b>");
+  });
+
+  it("invites another model in an empty column", () => {
+    expect(addModelCardSvg("dark", "tall")).toContain(">Add a Model</text>");
+    expect(addModelCardSvg("light", "portrait")).toContain('stroke-dasharray="10 8"');
   });
 });

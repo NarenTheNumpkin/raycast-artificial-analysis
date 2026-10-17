@@ -1,91 +1,155 @@
-import { Action, ActionPanel, Color, Icon, List, useNavigation } from "@raycast/api";
+import { Action, ActionPanel, Color, environment, Grid, Icon, List, useNavigation } from "@raycast/api";
 import { useMemo, useState } from "react";
 import { MAX_COMPARED_MODELS } from "../hooks/use-comparison";
 import { updatedText, useNow, useRankingsData, type RankingsData } from "../hooks/use-rankings";
-import { compareMetric, type Verdict } from "../lib/compare";
+import { addModelCardSvg, comparisonCardSvg, type ComparisonShape } from "../lib/cards";
+import { compareMetric } from "../lib/compare";
 import { configurationLabel, familyName } from "../lib/families";
 import { modelUrl } from "../lib/format";
-import { providerIcon } from "../lib/images";
-import { METRIC_GROUPS, METRICS } from "../lib/metrics";
+import { logoSvg, providerIcon, svgImage } from "../lib/images";
+import { METRIC_ORDER, METRICS } from "../lib/metrics";
 import { filterRankings, rankModels, type Model } from "../lib/models";
-import { metricIcon } from "./leaderboards";
 import { unavailableState } from "./load-states";
 import { GeneralActions } from "./model-actions";
 import { ModelDetails } from "./model-details";
 import { Setup } from "./setup";
 
-const VERDICT_COLORS: Partial<Record<Verdict, Color>> = { best: Color.Green, worst: Color.Red };
 const ADD_ICON = { source: Icon.PlusCircle, tintColor: Color.Blue };
+
+/**
+ * Three portrait columns until a fourth model joins, then four tall ones. Both fit the Raycast window
+ * without scrolling, and the next empty column holds the Add a Model card.
+ */
+function comparisonLayout(count: number): {
+  columns: number;
+  shape: ComparisonShape;
+  aspectRatio: "3/4" | "9/16";
+} {
+  return count < 3
+    ? { columns: 3, shape: "portrait", aspectRatio: "3/4" }
+    : { columns: 4, shape: "tall", aspectRatio: "9/16" };
+}
 
 export function CompareModels() {
   const data = useRankingsData();
   const now = useNow();
+  const [search, setSearch] = useState("");
   const models = useMemo(() => {
     const byId = new Map((data.snapshot?.models ?? []).map((model) => [model.id, model]));
     return [...data.comparison.ids].flatMap((id) => byId.get(id) ?? []);
   }, [data.snapshot, data.comparison.ids]);
+  const ranked = useMemo(() => rankModels(data.snapshot?.models ?? []), [data.snapshot]);
+  const matches = useMemo(() => (search.trim() ? filterRankings(ranked, search).slice(0, 12) : []), [ranked, search]);
+  const layout = comparisonLayout(models.length);
+  const cards = useMemo(() => {
+    const verdicts = METRIC_ORDER.map((metric) => compareMetric(models, metric));
+    return models.map((model, index) => ({
+      model,
+      image: svgImage(
+        comparisonCardSvg(
+          {
+            name: familyName(model.name),
+            configuration: [model.creator, configurationLabel(model.name)].filter(Boolean).join(" · "),
+            logo: logoSvg(model.creator),
+            values: METRIC_ORDER.map((metric, row) => ({
+              label: METRICS[metric].label,
+              value: METRICS[metric].formatBare(verdicts[row][index].value),
+              verdict: verdicts[row][index].verdict,
+            })),
+          },
+          environment.appearance,
+          layout.shape,
+        ),
+      ),
+    }));
+  }, [models, layout.shape]);
   if (data.needsApiKey) return <Setup />;
+  const searching = search.trim().length > 0;
   const unavailable = data.snapshot ? undefined : unavailableState(data);
+  const addModel = <ComparisonActions data={data} />;
   return (
-    <List navigationTitle="Compare Models" searchBarPlaceholder="Filter models and metrics…" isLoading={data.isLoading}>
-      <List.EmptyView
-        title={unavailable?.title ?? "No Models to Compare"}
+    <Grid
+      navigationTitle="Compare Models"
+      searchBarPlaceholder="Type a model name to add it…"
+      filtering={false}
+      searchText={search}
+      onSearchTextChange={setSearch}
+      inset={Grid.Inset.Zero}
+      isLoading={data.isLoading}
+    >
+      <Grid.EmptyView
+        title={unavailable?.title ?? (searching ? "No Matching Models" : "No Models to Compare")}
         description={
-          unavailable?.description ?? `Press ↵ to choose up to ${MAX_COMPARED_MODELS} models and see them side by side.`
+          unavailable?.description ??
+          (searching
+            ? "Try another model or provider name."
+            : `Type a model name above, or press ↵ to choose up to ${MAX_COMPARED_MODELS} models.`)
         }
-        icon={unavailable?.icon ?? Icon.BarChart}
-        actions={unavailable?.actions ?? <ComparisonActions data={data} />}
+        icon={unavailable?.icon ?? (searching ? Icon.MagnifyingGlass : Icon.BarChart)}
+        actions={unavailable?.actions ?? addModel}
       />
-      {data.snapshot && models.length ? (
-        <>
-          <List.Section
-            title="Models"
-            subtitle={`${models.length} of ${MAX_COMPARED_MODELS} · Green is better, red is worse · ${updatedText(data, now)}`}
-          >
-            {models.map((model) => (
-              <List.Item
+      {data.snapshot && searching ? (
+        <Grid.Section
+          title="Add to Comparison"
+          subtitle={`${models.length} of ${MAX_COMPARED_MODELS} selected`}
+          columns={6}
+          aspectRatio="1"
+          inset={Grid.Inset.Large}
+        >
+          {matches.map((model) => {
+            const added = data.comparison.ids.has(model.id);
+            return (
+              <Grid.Item
                 key={model.id}
                 id={model.id}
-                icon={{ value: providerIcon(model.creator), tooltip: model.creator }}
-                title={{ value: familyName(model.name), tooltip: model.name }}
-                subtitle={configurationLabel(model.name)}
-                accessories={[{ text: model.creator }]}
-                actions={<ComparisonActions data={data} model={model} />}
+                content={{ value: providerIcon(model.creator), tooltip: model.name }}
+                title={familyName(model.name)}
+                subtitle={added ? "✓ Added" : configurationLabel(model.name) || model.creator}
+                actions={
+                  <ActionPanel title={model.name}>
+                    <Action
+                      title={added ? "Remove from Comparison" : "Add to Comparison"}
+                      icon={added ? Icon.MinusCircle : Icon.PlusCircle}
+                      onAction={async () => {
+                        await data.comparison.toggle(model.id);
+                        setSearch("");
+                      }}
+                    />
+                  </ActionPanel>
+                }
               />
-            ))}
-            {models.length < MAX_COMPARED_MODELS ? (
-              <List.Item
-                id="add-model"
-                icon={ADD_ICON}
-                title="Add a Model"
-                subtitle={`Room for ${MAX_COMPARED_MODELS - models.length} more`}
-                actions={<ComparisonActions data={data} />}
-              />
-            ) : null}
-          </List.Section>
-          {METRIC_GROUPS.map((group) => (
-            <List.Section key={group.title} title={group.title}>
-              {group.metrics.map((metric) => (
-                <List.Item
-                  key={metric}
-                  id={`metric-${metric}`}
-                  icon={metricIcon(metric)}
-                  title={METRICS[metric].title}
-                  accessories={compareMetric(models, metric).map(({ model, value, verdict }) => ({
-                    tag: { value: METRICS[metric].format(value), color: VERDICT_COLORS[verdict] },
-                    icon: providerIcon(model.creator),
-                    tooltip: `${model.name}: ${METRICS[metric].format(value)}${
-                      verdict === "best" ? " (best)" : verdict === "worst" ? " (worst)" : ""
-                    }`,
-                  }))}
-                  actions={<ComparisonActions data={data} />}
-                />
-              ))}
-            </List.Section>
-          ))}
-        </>
+            );
+          })}
+        </Grid.Section>
       ) : null}
-    </List>
+      {data.snapshot && !searching && models.length ? (
+        <Grid.Section
+          title={models.length === 1 ? "Add One More Model to Compare" : `Comparing ${models.length} Models`}
+          subtitle={`Green is better, red is worse · ${updatedText(data, now)}`}
+          columns={layout.columns}
+          aspectRatio={layout.aspectRatio}
+        >
+          {cards.map(({ model, image }) => (
+            <Grid.Item
+              key={model.id}
+              id={model.id}
+              content={{ value: image, tooltip: `${model.name} · ${model.creator}` }}
+              actions={<ComparisonActions data={data} model={model} />}
+            />
+          ))}
+          {models.length < MAX_COMPARED_MODELS ? (
+            <Grid.Item
+              id="add-model"
+              content={{
+                value: svgImage(addModelCardSvg(environment.appearance, layout.shape)),
+                tooltip: "Add a model",
+              }}
+              actions={addModel}
+            />
+          ) : null}
+        </Grid.Section>
+      ) : null}
+    </Grid>
   );
 }
 
