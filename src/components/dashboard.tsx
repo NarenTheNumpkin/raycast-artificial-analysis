@@ -1,4 +1,4 @@
-import { Action, ActionPanel, environment, Grid, Icon } from "@raycast/api";
+import { Action, ActionPanel, Color, environment, Grid, Icon } from "@raycast/api";
 import { useMemo, useState } from "react";
 import { updatedText, useBrowseControls, useNow, useRankingsData } from "../hooks/use-rankings";
 import { browseCardSvg, modelCardSvg } from "../lib/cards";
@@ -111,6 +111,11 @@ export function Dashboard() {
                 tooltip: `#${model.rank} ${model.name}\n${model.creator} · ${METRICS.intelligence.title} ${model.value}`,
               }}
               title={model.creator}
+              accessory={
+                data.favorites.ids.has(model.id)
+                  ? { icon: { source: Icon.Star, tintColor: Color.Yellow }, tooltip: "Favorite" }
+                  : undefined
+              }
               actions={<ModelActions data={data} model={model} />}
             />
           ))}

@@ -63,7 +63,7 @@ export function RankingsList({
   return (
     <List
       onSelectionChange={setSelectedId}
-      navigationTitle={definition.commandTitle}
+      navigationTitle={controls.favoritesOnly ? "Favorite Models" : definition.commandTitle}
       searchBarPlaceholder="Search models or providers…"
       filtering={false}
       searchText={search}
