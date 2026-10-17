@@ -54,7 +54,7 @@ function rankColors(rank: number, theme: Appearance): { fill: string; text: stri
 }
 
 /** A 360-unit-wide card with the shared background; rendered at 2x for crisp text. */
-function frame(theme: Appearance, body: string, height: number): string {
+function frame(theme: Appearance, body: string, height = 202.5): string {
   const p = palette(theme);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="${height * 2}" viewBox="0 0 360 ${height}">
 <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p.background}"/><stop offset="1" stop-color="${p.backgroundEnd}"/></linearGradient></defs>
@@ -106,8 +106,6 @@ export function monogramSvg(creator: string, theme: Appearance): string {
 
 /** Line icons on a 24-unit grid, drawn in the tile's color. */
 const TILE_ICONS = {
-  intelligence:
-    '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.3 1.1 2.2v.5h5V16c0-.9.5-1.7 1.1-2.2A6 6 0 0 0 12 3z"/>',
   coding: '<path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/>',
   speed: '<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
   latency: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M10 2h4M12 2v3"/>',
@@ -121,7 +119,6 @@ const TILE_ICONS = {
 export type TileIcon = keyof typeof TILE_ICONS;
 
 const TILE_COLORS: Record<TileIcon, { dark: string; light: string }> = {
-  intelligence: { dark: "#60a5fa", light: "#2563eb" },
   coding: { dark: "#c084fc", light: "#9333ea" },
   speed: { dark: "#fb923c", light: "#ea580c" },
   latency: { dark: "#f472b6", light: "#db2777" },
@@ -135,48 +132,51 @@ function icon(name: TileIcon, color: string, x: number, y: number, size: number)
   return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="${filled ? color : "none"}" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TILE_ICONS[name]}</svg>`;
 }
 
-/**
- * A tall dashboard card: provider logo, rank pill, family name, and the headline score with its label.
- * Five fit side by side in one row.
- */
+/** A dashboard card: provider logo, rank pill, family name, and the headline score with its label. */
 export function modelCardSvg(
   model: RankedModel,
   theme: Appearance,
   logo: string,
   score: { value: string; label: string },
-  favorite = false,
 ): string {
   const p = palette(theme);
   const rank = rankColors(model.rank, theme);
+  const embedded = embedLogo(logo, 20, 18, 32);
   const rankText = `#${model.rank}`;
-  const pillWidth = 36 + rankText.length * 17;
-  const pillX = 332 - pillWidth;
-  const lines = labelLines(familyName(model.name), 13, 3);
-  const creatorY = 160 + (lines.length - 1) * 50 + 42;
+  const pillWidth = 22 + rankText.length * 11;
+  const lines = labelLines(familyName(model.name), 24);
   return frame(
     theme,
-    `<g fill="${p.text}" color="${p.text}">${embedLogo(logo, 28, 28, 56)}</g>
-${favorite ? icon("favorites", TILE_COLORS.favorites[theme], pillX - 48, 37, 36) : ""}
-<rect x="${pillX}" y="30" width="${pillWidth}" height="52" rx="26" fill="${rank.fill}"${rank.stroke ? ` stroke="${rank.stroke}" stroke-width="2"` : ""}/>
-<text x="${pillX + pillWidth / 2}" y="66" text-anchor="middle" font-family="${FONT}" font-size="30" font-weight="700" fill="${rank.text}">${escapeXml(rankText)}</text>
-${lines.map((line, index) => `<text x="28" y="${160 + index * 50}" font-family="${FONT}" font-size="44" font-weight="700" fill="${p.text}">${escapeXml(line)}</text>`).join("\n")}
-<text x="28" y="${creatorY}" font-family="${FONT}" font-size="28" fill="${p.muted}">${escapeXml(truncate(model.creator, 20))}</text>
-<text x="26" y="418" font-family="${FONT}" font-size="${fitFont(score.value, 300, 96, 0.58)}" font-weight="700" letter-spacing="-2" fill="${p.accent}">${escapeXml(score.value)}</text>
-<text x="28" y="456" font-family="${FONT}" font-size="26" font-weight="500" fill="${p.muted}">${escapeXml(score.label)}</text>`,
-    480,
+    `<g fill="${p.text}" color="${p.text}">${embedded}</g>
+<rect x="${340 - pillWidth}" y="19" width="${pillWidth}" height="30" rx="15" fill="${rank.fill}"${rank.stroke ? ` stroke="${rank.stroke}" stroke-width="1.5"` : ""}/>
+<text x="${340 - pillWidth / 2}" y="40" text-anchor="middle" font-family="${FONT}" font-size="17" font-weight="700" fill="${rank.text}">${escapeXml(rankText)}</text>
+${lines.map((line, index) => `<text x="20" y="${88 + index * 27}" font-family="${FONT}" font-size="23" font-weight="600" fill="${p.text}">${escapeXml(line)}</text>`).join("\n")}
+<text x="18" y="180" font-family="${FONT}" font-size="54" font-weight="700" letter-spacing="-1.5" fill="${p.accent}">${escapeXml(score.value)}</text>
+<text x="340" y="177" text-anchor="end" font-family="${FONT}" font-size="17" font-weight="500" fill="${p.muted}">${escapeXml(score.label)}</text>`,
   );
 }
 
-/** A square dashboard shortcut: a large colored icon, a short label, and one line of detail. */
-export function leaderboardTileSvg(tile: { icon: TileIcon; label: string; detail: string }, theme: Appearance): string {
+/** The card that completes the top-five grid and opens the full leaderboard. */
+export function browseCardSvg(count: number, theme: Appearance): string {
   const p = palette(theme);
-  const color = TILE_COLORS[tile.icon][theme];
   return frame(
     theme,
-    `<rect x="95" y="34" width="170" height="170" rx="46" fill="${color}" fill-opacity="${theme === "dark" ? 0.18 : 0.13}"/>
-${icon(tile.icon, color, 122, 61, 116)}
-<text x="180" y="274" text-anchor="middle" font-family="${FONT}" font-size="${fitFont(tile.label, 320, 50, 0.56)}" font-weight="700" fill="${p.text}">${escapeXml(tile.label)}</text>
-<text x="180" y="324" text-anchor="middle" font-family="${FONT}" font-size="${fitFont(tile.detail, 320, 36, 0.55)}" fill="${p.muted}">${escapeXml(tile.detail)}</text>`,
+    `<g fill="none" stroke="${p.accent}" stroke-width="3.5" stroke-linecap="round">
+<path d="M22 28h6m8 0h22M22 40h6m8 0h22M22 52h6m8 0h22"/>
+<path d="M306 168h30m-12-12 12 12-12 12" stroke-linejoin="round"/>
+</g>
+<text x="20" y="114" font-family="${FONT}" font-size="25" font-weight="600" fill="${p.text}">All ${count} models</text>
+<text x="20" y="142" font-family="${FONT}" font-size="17" fill="${p.muted}">Browse the full leaderboard</text>`,
+  );
+}
+
+/** A small square dashboard shortcut: a large colored icon on a tinted tile. Its name is the grid caption. */
+export function leaderboardTileSvg(name: TileIcon, theme: Appearance): string {
+  const color = TILE_COLORS[name][theme];
+  return frame(
+    theme,
+    `<rect x="1" y="1" width="358" height="358" rx="18" fill="${color}" fill-opacity="${theme === "dark" ? 0.16 : 0.12}"/>
+${icon(name, color, 80, 80, 200)}`,
     360,
   );
 }

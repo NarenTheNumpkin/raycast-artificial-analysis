@@ -1,8 +1,8 @@
-import { Action, ActionPanel, environment, Grid, Icon } from "@raycast/api";
+import { Action, ActionPanel, Color, environment, Grid, Icon } from "@raycast/api";
 import { useMemo, useState, type JSX } from "react";
 import { MAX_COMPARED_MODELS } from "../hooks/use-comparison";
 import { updatedText, useBrowseControls, useNow, useRankingsData } from "../hooks/use-rankings";
-import { leaderboardTileSvg, modelCardSvg, type TileIcon } from "../lib/cards";
+import { browseCardSvg, leaderboardTileSvg, modelCardSvg, type TileIcon } from "../lib/cards";
 import { distinctModelRankings } from "../lib/families";
 import { ALL_PROVIDERS, browseEntries } from "../lib/filters";
 import { logoSvg, providerIcon, svgImage } from "../lib/images";
@@ -48,16 +48,13 @@ export function Dashboard() {
       top.map((model) => ({
         model,
         image: svgImage(
-          modelCardSvg(
-            model,
-            environment.appearance,
-            logoSvg(model.creator),
-            { value: METRICS.intelligence.format(model.value), label: METRICS.intelligence.title },
-            data.favorites.ids.has(model.id),
-          ),
+          modelCardSvg(model, environment.appearance, logoSvg(model.creator), {
+            value: METRICS.intelligence.format(model.value),
+            label: METRICS.intelligence.title,
+          }),
         ),
       })),
-    [top, data.favorites.ids],
+    [top],
   );
   const comparing = data.comparison.ids.size;
   const tiles = useMemo((): Tile[] => {
@@ -82,15 +79,6 @@ export function Dashboard() {
       };
     });
     return [
-      {
-        id: "leaderboard-all",
-        icon: "intelligence",
-        label: "All Models",
-        detail: `${rankModels(models).length} models`,
-        tooltip: "Every model, ranked by Intelligence Index",
-        title: "All AI Models",
-        target: <RankingsList initialProviderId={provider?.id} />,
-      },
       ...leaderboards,
       {
         id: "compare-models",
@@ -115,12 +103,14 @@ export function Dashboard() {
     : unavailableState(data);
   return (
     <Grid
+      columns={3}
+      aspectRatio="16/9"
+      inset={Grid.Inset.Zero}
       navigationTitle="AI Model Rankings"
       searchBarPlaceholder="Search top models or providers…"
       filtering={false}
       searchText={search}
       onSearchTextChange={setSearch}
-      inset={Grid.Inset.Zero}
       isLoading={data.isLoading}
       searchBarAccessory={
         <Grid.Dropdown tooltip="Filter by Provider" value={providerId} onChange={controls.setProviderId}>
@@ -148,8 +138,6 @@ export function Dashboard() {
         <Grid.Section
           title={provider ? `Top ${provider.name} Models` : "Top Models"}
           subtitle={`${METRICS.intelligence.title} · ${updatedText(data, now)}`}
-          columns={5}
-          aspectRatio="3/4"
         >
           {cards.map(({ model, image }) => (
             <Grid.Item
@@ -159,21 +147,44 @@ export function Dashboard() {
                 value: image,
                 tooltip: `#${model.rank} ${model.name}\n${model.creator} · ${METRICS.intelligence.title} ${model.value}`,
               }}
+              title={model.creator}
+              accessory={
+                data.favorites.ids.has(model.id)
+                  ? { icon: { source: Icon.Star, tintColor: Color.Yellow }, tooltip: "Favorite" }
+                  : undefined
+              }
               actions={<ModelActions data={data} model={model} />}
             />
           ))}
+          <Grid.Item
+            id="browse-all"
+            content={svgImage(browseCardSvg(models.length, environment.appearance))}
+            title={provider ? `All ${provider.name} Models` : "All Evaluated Models"}
+            actions={
+              <ActionPanel>
+                <Action.Push
+                  title="Browse All Models"
+                  icon={Icon.List}
+                  target={<RankingsList initialProviderId={provider?.id} />}
+                />
+                <GeneralActions data={data} />
+              </ActionPanel>
+            }
+          />
         </Grid.Section>
       ) : null}
       {data.snapshot && !searching ? (
-        <Grid.Section title="Leaderboards" columns={7} aspectRatio="1">
+        <Grid.Section title="More Leaderboards" columns={8} aspectRatio="1">
           {tiles.map((tile) => (
             <Grid.Item
               key={tile.id}
               id={tile.id}
               content={{
-                value: svgImage(leaderboardTileSvg(tile, environment.appearance)),
+                value: svgImage(leaderboardTileSvg(tile.icon, environment.appearance)),
                 tooltip: tile.tooltip,
               }}
+              title={tile.label}
+              subtitle={tile.detail}
               actions={
                 <ActionPanel title={tile.title}>
                   <Action.Push title={`Open ${tile.title}`} icon={Icon.List} target={tile.target} />
