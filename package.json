@@ -100,10 +100,10 @@
     {
       "name": "showCoding",
       "type": "checkbox",
-      "title": "Optional Statistics",
+      "title": "Model Details",
       "label": "Show Coding Index",
-      "description": "Show Coding Index in model details. List rows display only the active ranking metric.",
-      "default": false,
+      "description": "Include the Coding Index in model details and copied summaries.",
+      "default": true,
       "required": false
     },
     {
@@ -111,8 +111,8 @@
       "type": "checkbox",
       "title": "",
       "label": "Show Input and Output Prices",
-      "description": "Show input and output prices in model details, in USD per million tokens.",
-      "default": false,
+      "description": "Include token prices, in USD per 1M tokens, in model details and copied summaries.",
+      "default": true,
       "required": false
     },
     {
@@ -120,8 +120,8 @@
       "type": "checkbox",
       "title": "",
       "label": "Show Output Speed",
-      "description": "Show median output tokens per second in model details.",
-      "default": false,
+      "description": "Include median output tokens per second in model details and copied summaries.",
+      "default": true,
       "required": false
     }
   ],
